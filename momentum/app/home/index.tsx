@@ -6,29 +6,71 @@ import {
   TouchableOpacity, 
   ScrollView, 
   SafeAreaView,
-  Image
+  Image,
+  ViewStyle
 } from 'react-native';
-import { router } from 'expo-router';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Badge from '../../components/Badge';
 import ProgressBar from '../../components/ProgressBar';
-import Calendar from '../../components/Calendar';
+
+import {Calendar, CalendarList, Agenda} from 'react-native-calendars';
+
+const Arrow = ({ direction }: { direction: 'left' | 'right' }) => (
+  <Text style={{ fontSize: 20, color: '#5D5FEF' }}>
+    {direction === 'left' ? '←' : '→'}
+  </Text>
+);
 
 export default function HomeScreen() {
   const [currentStreak, setCurrentStreak] = useState(5);
   const [longestStreak, setLongestStreak] = useState(12);
   const [progress, setProgress] = useState(0.7);
   
+  const today = new Date().toISOString().split('T')[0];
+  
   // Sample data for marked dates (workouts completed)
   const markedDates = {
-    '2023-05-01': { marked: true },
-    '2023-05-02': { marked: true },
-    '2023-05-03': { marked: true },
-    '2023-05-04': { marked: true },
-    '2023-05-05': { marked: true },
-    '2023-05-08': { marked: true },
-    '2023-05-09': { marked: true },
+    '2025-03-01': { 
+      selected: true,
+      selectedColor: '#E0E1FC',
+      selectedTextColor: '#5D5FEF'
+    },
+    '2025-03-02': { 
+      selected: true,
+      selectedColor: '#E0E1FC',
+      selectedTextColor: '#5D5FEF'
+    },
+    '2025-03-03': { 
+      selected: true,
+      selectedColor: '#E0E1FC',
+      selectedTextColor: '#5D5FEF'
+    },
+    '2025-03-04': { 
+      selected: true,
+      selectedColor: '#E0E1FC',
+      selectedTextColor: '#5D5FEF'
+    },
+    '2025-03-05': { 
+      selected: true,
+      selectedColor: '#E0E1FC',
+      selectedTextColor: '#5D5FEF'
+    },
+    '2025-03-08': { 
+      selected: true,
+      selectedColor: '#E0E1FC',
+      selectedTextColor: '#5D5FEF'
+    },
+    '2025-03-09': { 
+      selected: true,
+      selectedColor: '#E0E1FC',
+      selectedTextColor: '#5D5FEF'
+    },
+    [today]: {
+      selected: true,
+      selectedColor: '#E8F5E9',
+      selectedTextColor: '#4CAF50'
+    }
   };
 
   const handleDayPress = (date: { dateString: string }) => {
@@ -129,13 +171,62 @@ export default function HomeScreen() {
         />
 
         <Text style={styles.sectionTitle}>Workout Calendar</Text>
-        <Calendar 
-          markedDates={markedDates}
-          onDayPress={handleDayPress}
-          streakIndicator
-          currentStreakCount={currentStreak}
-          longestStreakCount={longestStreak}
-        />
+        <View style={styles.calendarContainer}>
+          <Calendar
+            initialDate={new Date().toISOString()}
+            minDate={new Date(new Date().getFullYear(), 0, 1).toISOString()}
+            maxDate={new Date(new Date().getFullYear(), 11, 31).toISOString()}
+            onDayPress={handleDayPress}
+            onDayLongPress={(day: { dateString: string }) => {
+              console.log('Long pressed day:', day);
+            }}
+            monthFormat={'MMMM yyyy'}
+            onMonthChange={(month: { month: number; year: number }) => {
+              console.log('Month changed:', month);
+            }}
+            hideExtraDays={true}
+            firstDay={1}
+            enableSwipeMonths={true}
+            markingType="period"
+            markedDates={markedDates}
+            renderArrow={(direction: 'left' | 'right') => <Arrow direction={direction} />}
+            theme={{
+              selectedDayBackgroundColor: '#E0E1FC',
+              selectedDayTextColor: '#5D5FEF',
+              todayBackgroundColor: '#E8F5E9',
+              todayTextColor: '#4CAF50',
+              arrowColor: '#5D5FEF',
+              monthTextColor: '#333',
+              textDayFontSize: 14,
+              textMonthFontSize: 16,
+              textDayHeaderFontSize: 14,
+              dayTextColor: '#333',
+              'stylesheet.calendar.period': {
+                base: {
+                  overflow: 'hidden',
+                  height: 34,
+                  alignItems: 'center',
+                  width: '100%'
+                },
+                fillers: {
+                  position: 'absolute',
+                  height: 34,
+                  flexDirection: 'row',
+                  left: 0,
+                  right: 0
+                },
+                leftFiller: {
+                  height: 34,
+                  flex: 1
+                },
+                rightFiller: {
+                  height: 34,
+                  flex: 1
+                }
+              }
+            }}
+          />
+        </View>
 
         <Text style={styles.sectionTitle}>Social</Text>
         <View style={styles.socialButtons}>
@@ -250,4 +341,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 4,
   },
+  calendarContainer: {
+    marginBottom: 24,
+  } as ViewStyle,
 }); 

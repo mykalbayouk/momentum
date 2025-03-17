@@ -66,10 +66,10 @@ const Input: React.FC<InputProps> = ({
         <TextInput
           style={[
             styles.input,
-            leftIcon && styles.inputWithLeftIcon,
-            rightIcon && styles.inputWithRightIcon,
+            leftIcon ? styles.inputWithLeftIcon : null,
+            rightIcon ? styles.inputWithRightIcon : null,
             inputStyle,
-          ]}
+          ].filter(Boolean)}
           placeholderTextColor="#999"
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -99,13 +99,13 @@ const Input: React.FC<InputProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
-  },
+  } as ViewStyle,
   label: {
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 6,
     color: '#333',
-  },
+  } as TextStyle,
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -113,43 +113,43 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     borderRadius: 12,
     backgroundColor: '#F9F9F9',
-  },
+  } as ViewStyle,
   focusedInput: {
     borderColor: '#5D5FEF',
     backgroundColor: '#FFFFFF',
-  },
+  } as ViewStyle,
   errorInput: {
     borderColor: '#FF5252',
-  },
+  } as ViewStyle,
   input: {
     flex: 1,
     height: 48,
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#333',
-  },
+  } as TextStyle,
   inputWithLeftIcon: {
     paddingLeft: 8,
-  },
+  } as TextStyle,
   inputWithRightIcon: {
     paddingRight: 8,
-  },
+  } as TextStyle,
   leftIcon: {
     paddingLeft: 16,
-  },
+  } as ViewStyle,
   rightIcon: {
     paddingRight: 16,
-  },
+  } as ViewStyle,
   error: {
     fontSize: 12,
     color: '#FF5252',
     marginTop: 4,
-  },
+  } as TextStyle,
   helper: {
     fontSize: 12,
     color: '#757575',
     marginTop: 4,
-  },
+  } as TextStyle,
 });
 
 export default Input; 

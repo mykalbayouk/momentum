@@ -75,32 +75,32 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     marginVertical: 8,
-  },
+  } as ViewStyle,
   label: {
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 6,
     color: '#333',
-  },
+  } as TextStyle,
   progressContainer: {
     width: '100%',
     overflow: 'hidden',
-  },
+  } as ViewStyle,
   progressFill: {
     position: 'absolute',
     left: 0,
     top: 0,
-  },
+  } as ViewStyle,
   animated: {
-    transition: 'width 0.3s ease',
-  },
+    width: '100%',
+  } as ViewStyle,
   percentage: {
     fontSize: 12,
     fontWeight: '500',
     marginTop: 4,
     color: '#666',
     textAlign: 'right',
-  },
+  } as TextStyle,
 });
 
 export default ProgressBar; 

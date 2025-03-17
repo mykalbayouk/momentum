@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef, ComponentRef } from 'react';
 import { 
   TouchableOpacity, 
   Text, 
@@ -23,7 +23,7 @@ interface ButtonProps {
   icon?: React.ReactNode;
 }
 
-const Button: React.FC<ButtonProps> = ({
+const Button = forwardRef<ComponentRef<typeof TouchableOpacity>, ButtonProps>(({
   title,
   onPress,
   variant = 'primary',
@@ -33,7 +33,7 @@ const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   icon
-}) => {
+}, ref) => {
   const getButtonStyle = () => {
     const baseStyle: any[] = [styles.button, styles[`${size}Button`]];
     
@@ -84,6 +84,7 @@ const Button: React.FC<ButtonProps> = ({
   
   return (
     <TouchableOpacity
+      ref={ref}
       style={getButtonStyle()}
       onPress={onPress}
       disabled={disabled || loading}
@@ -102,7 +103,7 @@ const Button: React.FC<ButtonProps> = ({
       )}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   button: {

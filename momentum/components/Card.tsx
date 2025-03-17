@@ -38,7 +38,7 @@ const Card: React.FC<CardProps> = ({
   children
 }) => {
   const getCardStyle = () => {
-    const baseStyle = [styles.card];
+    const baseStyle: ViewStyle[] = [styles.card];
     
     if (variant === 'elevated') {
       baseStyle.push(styles.elevatedCard);
@@ -100,46 +100,46 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginVertical: 8,
-  },
+  } as ViewStyle,
   elevatedCard: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-  },
+  } as ViewStyle,
   outlinedCard: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
-  },
+  } as ViewStyle,
   title: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
     color: '#333333',
-  },
+  } as TextStyle,
   subtitle: {
     fontSize: 14,
     color: '#666666',
     marginBottom: 12,
-  },
+  } as TextStyle,
   content: {
     fontSize: 14,
     color: '#333333',
     lineHeight: 20,
-  },
+  } as TextStyle,
   contentContainer: {
     marginVertical: 8,
-  },
+  } as ViewStyle,
   childrenContainer: {
     marginTop: 8,
-  },
+  } as ViewStyle,
   footer: {
     marginTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
     paddingTop: 12,
-  },
+  } as ViewStyle,
 });
 
 export default Card; 
