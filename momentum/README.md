@@ -1,50 +1,45 @@
-# Welcome to your Expo app 👋
+# Momentum - Fitness Streak Tracker
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Momentum is a fitness tracking app designed to help users build and maintain consistent workout habits through streak tracking and social motivation.
 
-## Get started
+## Features
 
-1. Install dependencies
+### Streak Tracking
+- Track your daily workout streaks
+- View your current and longest streaks
+- Visual calendar showing your workout history
+- Connected streak visualization for consecutive workout days
 
-   ```bash
-   npm install
-   ```
+### Progress Monitoring
+- Weekly progress tracking
+- Visual progress bar showing goal completion
+- Customizable workout goals
 
-2. Start the app
+### Social Features
+- Create or join workout groups
+- Compete with friends
+- Share progress and achievements
 
-   ```bash
-    npx expo start
-   ```
+### User Interface
+- Clean, modern design
+- Intuitive workout logging
+- Visual feedback for completed workouts
+- Easy-to-read calendar view with streak highlighting
 
-In the output, you'll find options to open the app in a
+## Technical Details
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Built with:
+- React Native
+- Expo
+- TypeScript
+- react-native-calendars
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Development Status
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+This app is currently in development. Key features implemented:
+- ✅ Streak tracking system
+- ✅ Calendar visualization
+- ✅ Progress tracking
+- ✅ Basic UI components
+- 🚧 Social features (in progress)
+- 🚧 User authentication (in progress)
