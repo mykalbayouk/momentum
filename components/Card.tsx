@@ -7,8 +7,9 @@ import {
   TextStyle,
   TouchableOpacity
 } from 'react-native';
+import { colors } from '../theme/colors';
 
-type CardVariant = 'default' | 'elevated' | 'outlined';
+export type CardVariant = 'default' | 'elevated' | 'outlined';
 
 interface CardProps {
   title?: string;
@@ -96,13 +97,13 @@ const Card: React.FC<CardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.default,
     borderRadius: 16,
     padding: 16,
     marginVertical: 8,
   } as ViewStyle,
   elevatedCard: {
-    shadowColor: '#000',
+    shadowColor: colors.neutral.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -110,22 +111,22 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   outlinedCard: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.neutral.grey200,
   } as ViewStyle,
   title: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333333',
+    color: colors.text.primary,
   } as TextStyle,
   subtitle: {
     fontSize: 14,
-    color: '#666666',
+    color: colors.text.secondary,
     marginBottom: 12,
   } as TextStyle,
   content: {
     fontSize: 14,
-    color: '#333333',
+    color: colors.text.primary,
     lineHeight: 20,
   } as TextStyle,
   contentContainer: {
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.neutral.grey200,
     paddingTop: 12,
   } as ViewStyle,
 });

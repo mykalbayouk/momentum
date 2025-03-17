@@ -9,8 +9,10 @@ import {
   TouchableOpacity,
   Animated
 } from 'react-native';
-import { router, Link } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { NavigationProp } from '../navigation/types';
 import Button from '../components/Button';
+import { colors } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -49,6 +51,7 @@ const onboardingData: OnboardingItem[] = [
 ];
 
 export default function LandingPage() {
+  const navigation = useNavigation<NavigationProp>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const slidesRef = useRef<FlatList>(null);
@@ -118,10 +121,12 @@ export default function LandingPage() {
 
   const handleLogin = () => {
     console.log('Login button pressed');
+    navigation.navigate('Login');
   };
 
   const handleSignup = () => {
     console.log('Sign up button pressed');
+    navigation.navigate('Signup');
   };
 
   return (
@@ -149,21 +154,17 @@ export default function LandingPage() {
       <View style={styles.buttonContainer}>
         {currentIndex === onboardingData.length - 1 ? (
           <View style={styles.authButtons}>
-            <Link href="/login" asChild>
-              <Button 
-                title="Login" 
-                onPress={handleLogin} 
-                variant="outline"
-                style={styles.loginButton}
-              />
-            </Link>
-            <Link href="/signup" asChild>
-              <Button 
-                title="Sign Up" 
-                onPress={handleSignup} 
-                style={styles.signupButton}
-              />
-            </Link>
+            <Button 
+              title="Login" 
+              onPress={handleLogin} 
+              variant="outline"
+              style={styles.loginButton}
+            />
+            <Button 
+              title="Sign Up" 
+              onPress={handleSignup} 
+              style={styles.signupButton}
+            />
           </View>
         ) : (
           <Button 
@@ -180,7 +181,7 @@ export default function LandingPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.default,
   },
   slide: {
     width,
@@ -200,13 +201,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text.primary,
     marginBottom: 10,
     textAlign: 'center',
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 24,
@@ -224,10 +225,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   activeDot: {
-    backgroundColor: '#5D5FEF',
+    backgroundColor: colors.primary.main,
   },
   inactiveDot: {
-    backgroundColor: '#E0E1FC',
+    backgroundColor: colors.neutral.grey200,
   },
   buttonContainer: {
     position: 'absolute',

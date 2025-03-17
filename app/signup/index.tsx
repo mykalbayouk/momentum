@@ -9,11 +9,14 @@ import {
   ScrollView,
   SafeAreaView
 } from 'react-native';
-import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { NavigationProp } from '../../navigation/types';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import { colors } from '../../theme/colors';
 
 export default function SignupScreen() {
+  const navigation = useNavigation<NavigationProp>();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,7 +93,7 @@ export default function SignupScreen() {
         setIsLoading(false);
         console.log('Signup successful, navigating to home');
         // Navigate to home screen after successful signup
-        router.replace('/home');
+        navigation.navigate('Home');
       }, 1500);
     } else {
       console.log('Signup validation failed');
@@ -112,7 +115,7 @@ export default function SignupScreen() {
               style={styles.backButton}
               onPress={() => {
                 console.log('Back button pressed');
-                router.back();
+                navigation.goBack();
               }}
             >
               <Text style={styles.backButtonText}>←</Text>
@@ -123,8 +126,8 @@ export default function SignupScreen() {
 
           <View style={styles.form}>
             <Input
-              label="Full Name"
-              placeholder="Enter your full name"
+              label="Name"
+              placeholder="Enter your name"
               value={name}
               onChangeText={(text) => {
                 console.log('Name input changed:', text);
@@ -150,7 +153,7 @@ export default function SignupScreen() {
 
             <Input
               label="Password"
-              placeholder="Create a password"
+              placeholder="Enter your password"
               value={password}
               onChangeText={(text) => {
                 console.log('Password input changed');
@@ -159,7 +162,6 @@ export default function SignupScreen() {
               secureTextEntry
               error={passwordError}
               onBlur={() => validatePassword(password)}
-              helper="Password must be at least 6 characters"
             />
 
             <Input
@@ -187,7 +189,7 @@ export default function SignupScreen() {
             <Text style={styles.footerText}>Already have an account? </Text>
             <TouchableOpacity onPress={() => {
               console.log('Login link pressed');
-              router.push('/login');
+              navigation.navigate('Login');
             }}>
               <Text style={styles.loginText}>Login</Text>
             </TouchableOpacity>
@@ -201,7 +203,7 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.default,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -224,12 +226,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text.primary,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
     lineHeight: 24,
   },
   form: {
@@ -249,7 +251,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   loginText: {
-    color: '#5D5FEF',
+    color: colors.text.secondary,
     fontSize: 14,
     fontWeight: '600',
   },

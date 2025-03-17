@@ -7,9 +7,10 @@ import {
   ViewStyle,
   TextStyle
 } from 'react-native';
+import { colors } from '../theme/colors';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
-type ButtonSize = 'small' | 'medium' | 'large';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
+export type ButtonSize = 'small' | 'medium' | 'large';
 
 interface ButtonProps {
   title: string;
@@ -93,7 +94,7 @@ const Button = forwardRef<ComponentRef<typeof TouchableOpacity>, ButtonProps>(({
       {loading ? (
         <ActivityIndicator 
           size="small" 
-          color={variant === 'primary' ? '#FFFFFF' : '#5D5FEF'} 
+          color={variant === 'primary' ? colors.text.inverse : colors.primary.main} 
         />
       ) : (
         <>
@@ -107,66 +108,71 @@ const Button = forwardRef<ComponentRef<typeof TouchableOpacity>, ButtonProps>(({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+  },
+  smallButton: {
+    height: 32,
+    paddingHorizontal: 12,
+  },
+  mediumButton: {
+    height: 40,
+    paddingHorizontal: 16,
+  },
+  largeButton: {
+    height: 48,
+    paddingHorizontal: 24,
   },
   primaryButton: {
-    backgroundColor: '#5D5FEF',
+    backgroundColor: colors.primary.main,
   },
   secondaryButton: {
-    backgroundColor: '#E0E1FC',
+    backgroundColor: colors.secondary.main,
   },
   outlineButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#5D5FEF',
+    borderColor: colors.primary.main,
   },
   textButton: {
     backgroundColor: 'transparent',
+    paddingHorizontal: 8,
   },
   disabledButton: {
-    opacity: 0.5,
-  },
-  smallButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  mediumButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  largeButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    backgroundColor: colors.neutral.grey300,
+    borderColor: colors.neutral.grey400,
   },
   buttonText: {
+    fontSize: 14,
     fontWeight: '600',
-  },
-  primaryText: {
-    color: '#FFFFFF',
-  },
-  secondaryText: {
-    color: '#5D5FEF',
-  },
-  outlineText: {
-    color: '#5D5FEF',
-  },
-  textButtonText: {
-    color: '#5D5FEF',
-  },
-  disabledText: {
-    opacity: 0.7,
+    textAlign: 'center',
   },
   smallText: {
-    fontSize: 14,
+    fontSize: 12,
   },
   mediumText: {
-    fontSize: 16,
+    fontSize: 14,
   },
   largeText: {
-    fontSize: 18,
+    fontSize: 16,
+  },
+  primaryText: {
+    color: colors.text.inverse,
+  },
+  secondaryText: {
+    color: colors.text.inverse,
+  },
+  outlineText: {
+    color: colors.primary.main,
+  },
+  textButtonText: {
+    color: colors.primary.main,
+  },
+  disabledText: {
+    color: colors.text.disabled,
   },
 });
 

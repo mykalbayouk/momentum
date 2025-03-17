@@ -40,6 +40,7 @@ This app is currently in development. Key features implemented:
 - ✅ Streak tracking system
 - ✅ Calendar visualization
 - ✅ Progress tracking
+    - ✅ Create Log Workout Page
 - ✅ Basic UI components
 - 🚧 Social features (in progress)
 - 🚧 User authentication (in progress)

@@ -9,11 +9,14 @@ import {
   ScrollView,
   SafeAreaView
 } from 'react-native';
-import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { NavigationProp } from '../../navigation/types';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import { colors } from '../../theme/colors';
 
 export default function LoginScreen() {
+  const navigation = useNavigation<NavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -61,7 +64,7 @@ export default function LoginScreen() {
         setIsLoading(false);
         console.log('Login successful, navigating to home');
         // Navigate to home screen after successful login
-        router.replace('/home');
+        navigation.navigate('Home');
       }, 1500);
     } else {
       console.log('Login validation failed');
@@ -83,7 +86,7 @@ export default function LoginScreen() {
               style={styles.backButton}
               onPress={() => {
                 console.log('Back button pressed');
-                router.back();
+                navigation.goBack();
               }}
             >
               <Text style={styles.backButtonText}>←</Text>
@@ -139,7 +142,7 @@ export default function LoginScreen() {
             <Text style={styles.footerText}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => {
               console.log('Sign up link pressed');
-              router.push('/signup');
+              navigation.navigate('Signup');
             }}>
               <Text style={styles.signupText}>Sign Up</Text>
             </TouchableOpacity>
@@ -153,7 +156,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.default,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -176,12 +179,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text.primary,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
     lineHeight: 24,
   },
   form: {
@@ -192,7 +195,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   forgotPasswordText: {
-    color: '#5D5FEF',
+    color: colors.primary.main,
     fontSize: 14,
   },
   loginButton: {
@@ -209,7 +212,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   signupText: {
-    color: '#5D5FEF',
+    color: colors.text.secondary,
     fontSize: 14,
     fontWeight: '600',
   },
