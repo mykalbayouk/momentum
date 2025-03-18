@@ -93,7 +93,7 @@ export default function SignupScreen() {
         setIsLoading(false);
         console.log('Signup successful, navigating to home');
         // Navigate to home screen after successful signup
-        navigation.navigate('Home');
+        navigation.navigate('MainApp');
       }, 1500);
     } else {
       console.log('Signup validation failed');

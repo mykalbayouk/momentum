@@ -1,29 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
-  TouchableOpacity, 
   ScrollView, 
   SafeAreaView,
-  Image,
   ViewStyle
 } from 'react-native';
 import Card from '../../components/Card';
-import Button from '../../components/Button';
 import Badge from '../../components/Badge';
 import ProgressBar from '../../components/ProgressBar';
 import Calendar from '../../components/Calendar';
 import { colors } from '../../theme/colors';
-import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from '../../navigation/types';
 
 export default function HomeScreen() {
-  const navigation = useNavigation<NavigationProp>();
   const [currentStreak, setCurrentStreak] = useState(5);
   const [longestStreak, setLongestStreak] = useState(12);
   const [progress, setProgress] = useState(0.7);
   
+
   const today = new Date().toISOString().split('T')[0];
   
   // Sample data for marked dates (workouts completed)
@@ -74,33 +69,11 @@ export default function HomeScreen() {
     console.log('Selected date:', date.dateString);
   };
 
-  const handleLogWorkout = () => {
-    console.log('Log workout pressed');
-    navigation.navigate('Workout');
-  };
-
-  const handleCreateGroup = () => {
-    console.log('Create group pressed');
-    // In a real app, this would navigate to a group creation screen
-  };
-
-  const handleJoinGroup = () => {
-    console.log('Join group pressed');
-    // In a real app, this would navigate to a group joining screen
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Momentum</Text>
-          <TouchableOpacity onPress={() => {
-            console.log('Profile button pressed');
-          }}>
-            <View style={styles.profileIcon}>
-              <Text style={styles.profileInitial}>M</Text>
-            </View>
-          </TouchableOpacity>
         </View>
 
         <Card
@@ -133,13 +106,6 @@ export default function HomeScreen() {
               </View>
             </View>
           }
-          footer={
-            <Button
-              title="Log Today's Workout"
-              onPress={handleLogWorkout}
-              style={styles.logButton}
-            />
-          }
         />
 
         <Card
@@ -159,7 +125,6 @@ export default function HomeScreen() {
           }
         />
 
-        <Text style={styles.sectionTitle}>Workout Calendar</Text>
         <View style={styles.calendarContainer}>
           <Calendar
             markedDates={markedDates}
@@ -170,21 +135,6 @@ export default function HomeScreen() {
             onMonthChange={(month) => {
               console.log('Month changed:', month);
             }}
-          />
-        </View>
-
-        <Text style={styles.sectionTitle}>Social</Text>
-        <View style={styles.socialButtons}>
-          <Button
-            title="Create Group"
-            onPress={handleCreateGroup}
-            variant="outline"
-            style={styles.socialButton}
-          />
-          <Button
-            title="Join Group"
-            onPress={handleJoinGroup}
-            style={styles.socialButton}
           />
         </View>
       </ScrollView>
@@ -201,28 +151,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 24,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
     color: colors.text.primary,
-  },
-  profileIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.neutral.grey200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileInitial: {
-    color: colors.text.inverse,
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   streakCard: {
     marginBottom: 16,
@@ -257,9 +190,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral.grey200,
     marginHorizontal: 16,
   },
-  logButton: {
-    marginTop: 8,
-  },
   progressCard: {
     marginBottom: 24,
   },
@@ -276,15 +206,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     marginBottom: 12,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  socialButton: {
-    flex: 1,
-    marginHorizontal: 4,
   },
   calendarContainer: {
     marginBottom: 24,

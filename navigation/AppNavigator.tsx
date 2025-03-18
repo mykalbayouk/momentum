@@ -6,8 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LandingPage from '../app/index';
 import LoginScreen from '../app/login/index';
 import SignupScreen from '../app/signup/index';
-import HomeScreen from '../app/home/index';
-import WorkoutScreen from '../app/workout/index';
+import TabNavigator from './TabNavigator';
 
 const Stack = createNativeStackNavigator();
 
@@ -15,7 +14,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="Landing"
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
@@ -25,13 +24,12 @@ export default function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen 
-          name="Home" 
-          component={HomeScreen}
+          name="MainApp" 
+          component={TabNavigator}
           options={{
-            gestureEnabled: false // Disable swipe-back gesture for Home screen
+            gestureEnabled: false
           }}
         />
-        <Stack.Screen name="Workout" component={WorkoutScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

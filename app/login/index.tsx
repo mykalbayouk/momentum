@@ -64,7 +64,7 @@ export default function LoginScreen() {
         setIsLoading(false);
         console.log('Login successful, navigating to home');
         // Navigate to home screen after successful login
-        navigation.navigate('Home');
+        navigation.navigate('MainApp');
       }, 1500);
     } else {
       console.log('Login validation failed');

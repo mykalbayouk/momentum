@@ -58,6 +58,7 @@ export default function Calendar({
         monthTextColor: colors.text.primary,
         textDayFontSize: 14,
         textMonthFontSize: 16,
+        textMonthFontWeight: 'bold',
         textDayHeaderFontSize: 14,
         dayTextColor: colors.text.primary,
         textSectionTitleColor: colors.text.secondary,

@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   ViewStyle, 
   TextStyle,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import { colors } from '../theme/colors';
 
@@ -54,14 +55,8 @@ const Card: React.FC<CardProps> = ({
     return baseStyle;
   };
   
-  const CardContainer = onPress ? TouchableOpacity : View;
-  
-  return (
-    <CardContainer 
-      style={getCardStyle()} 
-      onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-    >
+  const renderContent = () => (
+    <>
       {title && (
         <Text style={[styles.title, titleStyle]}>{title}</Text>
       )}
@@ -91,23 +86,47 @@ const Card: React.FC<CardProps> = ({
           {footer}
         </View>
       )}
-    </CardContainer>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity 
+        style={getCardStyle()} 
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        {renderContent()}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={getCardStyle()}>
+      {renderContent()}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.background.default,
+    backgroundColor: colors.background.paper,
     borderRadius: 16,
     padding: 16,
     marginVertical: 8,
   } as ViewStyle,
   elevatedCard: {
-    shadowColor: colors.neutral.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.neutral.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   } as ViewStyle,
   outlinedCard: {
     borderWidth: 1,
