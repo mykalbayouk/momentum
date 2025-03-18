@@ -54,16 +54,16 @@ export const colors = {
   
   // Background colors
   background: {
-    default: '#F2F2F2', // Light grey background
-    paper: '#FFFFFF', // White paper background
+    default: '#121212FF', // Light grey background
+    paper: '#252525FF', // White paper background
   },
   
   // Text colors
   text: {
-    primary: '#000000', // Black text
-    secondary: '#666666', // Medium grey text
-    disabled: '#999999', // Light grey text
-    inverse: '#FFFFFF', // White text
+    primary: '#FFFFFFFF', // Black text
+    secondary: '#ACACACFF', // Medium grey text
+    disabled: '#4B4B4BFF', // Light grey text
+    inverse: '#000000FF', // White text
   },
   border: {
     light: '#E6E6E6',

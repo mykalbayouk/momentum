@@ -42,7 +42,7 @@ export default function Calendar({
       monthFormat={'MMMM yyyy'}
       onMonthChange={onMonthChange}
       hideExtraDays={true}
-      firstDay={1}
+      firstDay={0}
       enableSwipeMonths={true}
       markingType="custom"
       markedDates={markedDates}

@@ -6,7 +6,7 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
-  ViewStyle,
+
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';

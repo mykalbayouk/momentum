@@ -14,7 +14,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Landing"
+        initialRouteName="MainApp"
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',

@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   } as TextStyle,
   defaultText: {
-    color: colors.text.secondary,
+    color: colors.text.inverse,
   } as TextStyle,
   successText: {
     color: colors.secondary.dark,

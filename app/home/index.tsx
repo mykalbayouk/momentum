@@ -87,7 +87,7 @@ export default function HomeScreen() {
                   <Badge 
                     label={currentStreak.toString()} 
                     variant="default"
-                    size="small"
+                    size="medium"
                   />
                   <Text style={styles.streakLabel}>days</Text>
                 </View>
