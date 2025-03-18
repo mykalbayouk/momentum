@@ -7,13 +7,15 @@ import {
   KeyboardAvoidingView, 
   Platform,
   ScrollView,
-  SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../../navigation/types';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { colors } from '../../theme/colors';
+import { supabase } from '../../utils/supabase';
 
 export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -24,7 +26,6 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const validateEmail = (email: string) => {
-    console.log('Validating email:', email);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
       setEmailError('Email is required');
@@ -38,7 +39,6 @@ export default function LoginScreen() {
   };
 
   const validatePassword = (password: string) => {
-    console.log('Validating password');
     if (!password) {
       setPasswordError('Password is required');
       return false;
@@ -50,24 +50,60 @@ export default function LoginScreen() {
     return true;
   };
 
-  const handleLogin = () => {
-    console.log('Login attempt with:', { email, password });
+  const handleLogin = async () => {
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
 
     if (isEmailValid && isPasswordValid) {
       setIsLoading(true);
-      
-      // Simulate API call
-      console.log('Simulating API call for login...');
-      setTimeout(() => {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          Alert.alert('Login Error', error.message);
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.user) {
+          console.log('Login successful:', data.user.email);
+          navigation.navigate('MainApp');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        Alert.alert('Error', 'An unexpected error occurred during login');
+      } finally {
         setIsLoading(false);
-        console.log('Login successful, navigating to home');
-        // Navigate to home screen after successful login
-        navigation.navigate('MainApp');
-      }, 1500);
-    } else {
-      console.log('Login validation failed');
+      }
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address first');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'momentum://reset-password',
+      });
+
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      Alert.alert(
+        'Password Reset',
+        'Check your email for the password reset link'
+      );
+    } catch (error) {
+      console.error('Password reset error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
     }
   };
 
@@ -125,7 +161,7 @@ export default function LoginScreen() {
 
             <TouchableOpacity 
               style={styles.forgotPassword}
-              onPress={() => console.log('Forgot password pressed')}
+              onPress={handleForgotPassword}
             >
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>

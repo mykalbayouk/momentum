@@ -7,8 +7,8 @@ import HomeScreen from '../app/home';
 import GroupsScreen from '../app/groups';
 import LeaderboardScreen from '../app/leaderboard';
 import ProfileScreen from '../app/profile';
-import LogWorkoutScreen from '../app/log-workout';
 import CreateGroupScreen from '../app/create-group';
+import WorkoutModal from '../components/WorkoutModal';
 
 const Tab = createBottomTabNavigator();
 
@@ -107,22 +107,11 @@ export default function TabNavigator() {
         />
       </Tab.Navigator>
 
-      <Modal
+      <WorkoutModal
         visible={showLogWorkoutModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowLogWorkoutModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Log Workout</Text>
-            <TouchableOpacity onPress={() => setShowLogWorkoutModal(false)}>
-              <Text style={styles.closeButton}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          <LogWorkoutScreen onClose={() => setShowLogWorkoutModal(false)} />
-        </SafeAreaView>
-      </Modal>
+        onClose={() => setShowLogWorkoutModal(false)}
+        onUpdate={() => setShowLogWorkoutModal(false)}
+      />
     </>
   );
 }

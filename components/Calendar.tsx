@@ -6,10 +6,9 @@ import { colors } from '../theme/colors';
 interface CalendarProps {
   markedDates: {
     [date: string]: {
-      selected?: boolean;
-      selectedColor?: string;
-      selectedTextColor?: string;
-      backgroundColor?: string;
+      startingDay?: boolean;
+      endingDay?: boolean;
+      color?: string;
       textColor?: string;
     };
   };
@@ -43,8 +42,8 @@ export default function Calendar({
       onMonthChange={onMonthChange}
       hideExtraDays={true}
       firstDay={0}
-      enableSwipeMonths={true}
-      markingType="custom"
+      enableSwipeMonths={false}
+      markingType="period"
       markedDates={markedDates}
       renderArrow={(direction: 'left' | 'right') => <Arrow direction={direction} />}
       theme={{
@@ -52,8 +51,8 @@ export default function Calendar({
         calendarBackground: colors.background.paper,
         selectedDayBackgroundColor: colors.primary.light,
         selectedDayTextColor: colors.primary.main,
-        todayBackgroundColor: colors.semantic.success.light,
-        todayTextColor: colors.semantic.success.main,
+        todayBackgroundColor: 'transparent',
+        todayTextColor: colors.text.primary,
         arrowColor: colors.primary.main,
         monthTextColor: colors.text.primary,
         textDayFontSize: 14,
@@ -61,30 +60,7 @@ export default function Calendar({
         textMonthFontWeight: 'bold',
         textDayHeaderFontSize: 14,
         dayTextColor: colors.text.primary,
-        textSectionTitleColor: colors.text.secondary,
-        'stylesheet.calendar.period': {
-          base: {
-            overflow: 'hidden',
-            height: 34,
-            alignItems: 'center',
-            width: '100%'
-          },
-          fillers: {
-            position: 'absolute',
-            height: 34,
-            flexDirection: 'row',
-            left: 0,
-            right: 0
-          },
-          leftFiller: {
-            height: 34,
-            flex: 1
-          },
-          rightFiller: {
-            height: 34,
-            flex: 1
-          }
-        }
+        textSectionTitleColor: colors.text.secondary
       }}
       style={style}
     />

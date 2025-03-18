@@ -31,7 +31,7 @@ export const colors = {
   // Semantic colors
   semantic: {
     success: {
-      main: '#800000', // Maroon for success
+      main: '#00801CFF', // Maroon for success
       light: '#E5E8FFFF',
       dark: '#4D0000',
     },
@@ -72,6 +72,11 @@ export const colors = {
   overlay: {
     light: 'rgba(0, 0, 0, 0.5)',
     dark: 'rgba(0, 0, 0, 0.7)',
+  },
+  error: {
+    main: '#DC2626',
+    light: '#FEE2E2',
+    dark: '#991B1B',
   },
 } as const;
 

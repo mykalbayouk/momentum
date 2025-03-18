@@ -36,3 +36,9 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# dummy data
+dummy_data.sql
+
+# sql
+sql/

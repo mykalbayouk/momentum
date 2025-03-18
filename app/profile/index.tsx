@@ -1,200 +1,432 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
   Modal,
   Image,
+  Alert,
+  TextInput,
+  ImageStyle
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
-import Button from '../../components/Button';
 import Feather from 'react-native-vector-icons/Feather';
+import { supabase } from '../../utils/supabase';
+import { useNavigation } from '@react-navigation/native';
+import { NavigationProp } from '../../navigation/types';
+import { Session } from '@supabase/supabase-js';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
+import ImageUpload from '../../components/ImageUpload';
 
-interface User {
+interface Profile {
   id: string;
-  name: string;
+  username: string;
   email: string;
-  activeDays: number;
-  imageUri: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-// Sample user data
-const sampleUser: User = {
-  id: '1',
-  name: 'John Doe',
-  email: 'john.doe@example.com',
-  activeDays: 5,
-  imageUri: null,
-};
+interface AvatarProps {
+  size: number;
+  url: string | null;
+  onUpload: (filePath: string) => void;
+}
+
+function Avatar({ url, size = 150, onUpload }: AvatarProps) {
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const avatarSize = { height: size, width: size };
+
+  useEffect(() => {
+    if (url) {
+      if (url.startsWith('http')) {
+        setAvatarUrl(url);
+        return;
+      }
+      downloadImage(url);
+    }
+  }, [url]);
+
+  async function downloadImage(path: string) {
+    try {
+      const fileName = path.split('/').pop();
+      if (!fileName) throw new Error('Invalid file path');
+
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .download(fileName);
+
+      if (error) {
+        throw error;
+      }
+
+      const fr = new FileReader();
+      fr.readAsDataURL(data);
+      fr.onload = () => {
+        setAvatarUrl(fr.result as string);
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        console.log('Error downloading image: ', error.message);
+        setAvatarUrl(url);
+      }
+    }
+  }
+
+  async function uploadAvatar() {
+    try {
+      setUploading(true);
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: false,
+        allowsEditing: true,
+        quality: 1,
+        exif: false,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        console.log('User cancelled image picker.');
+        return;
+      }
+
+      const image = result.assets[0];
+      console.log('Got image', image);
+
+      if (!image.uri) {
+        throw new Error('No image uri!');
+      }
+
+      // Read the file as a Base64-encoded string using Expo's FileSystem
+      const base64 = await FileSystem.readAsStringAsync(image.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Decode the Base64 string to an ArrayBuffer
+      const arrayBuffer = decode(base64);
+
+      const fileExt = image.uri?.split('.').pop()?.toLowerCase() ?? 'jpeg';
+      const path = `${Date.now()}.${fileExt}`;
+      
+      const { data, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, arrayBuffer, {
+          contentType: image.mimeType ?? 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      onUpload(data.path);
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert(error.message);
+      } else {
+        throw error;
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <View style={styles.avatarContainer}>
+      {avatarUrl ? (
+        <Image
+          source={{ uri: avatarUrl }}
+          accessibilityLabel="Avatar"
+          style={[avatarSize, styles.avatar, styles.image]}
+        />
+      ) : (
+        <View style={[avatarSize, styles.avatar, styles.noImage]}>
+          <Text style={styles.imagePlaceholderText}>?</Text>
+        </View>
+      )}
+      <TouchableOpacity 
+        style={[styles.editImageButton, uploading && styles.uploadingButton]}
+        onPress={uploadAvatar}
+        disabled={uploading}
+      >
+        <Feather 
+          name={uploading ? "loader" : "camera"} 
+          size={20} 
+          color={colors.text.inverse} 
+        />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
-  const [user, setUser] = useState<User>(sampleUser);
+  const navigation = useNavigation<NavigationProp>();
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [username, setUsername] = useState('');
 
-  const handleImagePick = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
     });
 
-    if (!result.canceled) {
-      setUser(prev => ({ ...prev, imageUri: result.assets[0].uri }));
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      getProfile();
+    }
+  }, [session]);
+
+  async function getProfile() {
+    try {
+      setLoading(true);
+      if (!session?.user) throw new Error('No user on the session!');
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setProfile(data);
+        setUsername(data.username || '');
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateProfile() {
+    try {
+      if (!session?.user) throw new Error('No user on the session!');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id);
+
+      if (error) throw error;
+
+      await getProfile();
+      setIsEditing(false);
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      }
+    }
+  }
+
+  async function handleAvatarUpload(filePath: string) {
+    try {
+      if (!session?.user) throw new Error('No user on the session!');
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id);
+
+      if (updateError) throw updateError;
+
+      await getProfile();
+      Alert.alert('Success', 'Avatar updated successfully');
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      }
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigation.navigate('Landing');
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      }
     }
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    // In a real app, this would save to a backend
-  };
-
-  const renderSettingsModal = () => (
-    <Modal
-      visible={showSettings}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <SafeAreaView style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Settings</Text>
-          <TouchableOpacity 
-            onPress={() => setShowSettings(false)}
-            style={styles.closeButton}
-          >
-            <Feather name="x" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text>Loading profile...</Text>
         </View>
-        <ScrollView style={styles.modalContent}>
-          <Card variant="elevated" style={styles.settingsCard}>
-            <TouchableOpacity style={styles.settingItem}>
-              <Text style={styles.settingText}>Notifications</Text>
-              <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem}>
-              <Text style={styles.settingText}>Privacy</Text>
-              <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem}>
-              <Text style={styles.settingText}>Help & Support</Text>
-              <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.settingItem}>
-              <Text style={styles.settingText}>Log Out</Text>
-              <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-            </TouchableOpacity>
-          </Card>
-        </ScrollView>
       </SafeAreaView>
-    </Modal>
-  );
+    );
+  }
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text>No user data available</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
-          <TouchableOpacity 
-            onPress={() => setShowSettings(true)}
-            style={styles.settingsButton}
-          >
-            <Feather name="settings" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.title}>Profile</Text>
+        <TouchableOpacity 
+          onPress={() => setShowSettings(true)}
+          style={styles.settingsButton}
+        >
+          <Feather name="settings" size={24} color={colors.text.primary} />
+        </TouchableOpacity>
+      </View>
 
+      <ScrollView style={styles.scrollView}>
         <Card variant="elevated" style={styles.profileCard}>
-          <TouchableOpacity 
-            style={styles.imageContainer} 
-            onPress={handleImagePick}
-          >
-            {user.imageUri ? (
-              <Image source={{ uri: user.imageUri }} style={styles.profileImage} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imagePlaceholderText}>
-                  {user.name[0]}
-                </Text>
-              </View>
-            )}
-            <View style={styles.editImageButton}>
-              <Feather name="camera" size={20} color={colors.text.inverse} />
-            </View>
-          </TouchableOpacity>
+          <View style={styles.imageContainer}>
+            <ImageUpload 
+              url={profile.avatar_url} 
+              size={120} 
+              onUpload={handleAvatarUpload}
+              bucket="avatars"
+              aspect={[1, 1]}
+              placeholder={profile.username?.[0]?.toUpperCase() || '?'}
+              style={styles.avatar}
+            />
+          </View>
 
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Username</Text>
-              <TextInput
-                style={styles.input}
-                value={user.name}
-                onChangeText={(text) => setUser(prev => ({ ...prev, name: text }))}
-                editable={isEditing}
-                placeholderTextColor={colors.text.secondary}
-              />
+              {isEditing ? (
+                <TextInput
+                  style={styles.input}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="Enter username"
+                />
+              ) : (
+                <Text style={styles.value}>{profile.username}</Text>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={user.email}
-                onChangeText={(text) => setUser(prev => ({ ...prev, email: text }))}
-                editable={isEditing}
-                keyboardType="email-address"
-                placeholderTextColor={colors.text.secondary}
-              />
+              <Text style={styles.value}>{profile.email}</Text>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Active Days per Week</Text>
-              <View style={styles.activeDaysContainer}>
-                {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-                  <TouchableOpacity
-                    key={day}
-                    style={[
-                      styles.dayButton,
-                      user.activeDays === day && styles.dayButtonActive,
-                    ]}
-                    onPress={() => isEditing && setUser(prev => ({ ...prev, activeDays: day }))}
-                  >
-                    <Text
-                      style={[
-                        styles.dayButtonText,
-                        user.activeDays === day && styles.dayButtonTextActive,
-                      ]}
-                    >
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <Text style={styles.label}>Member Since</Text>
+              <Text style={styles.value}>
+                {new Date(profile.created_at).toLocaleDateString()}
+              </Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Last Updated</Text>
+              <Text style={styles.value}>
+                {new Date(profile.updated_at).toLocaleDateString()}
+              </Text>
             </View>
 
             {isEditing ? (
-              <Button
-                title="Save Changes"
-                onPress={handleSave}
-                style={styles.saveButton}
-              />
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={() => setIsEditing(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.saveButton]}
+                  onPress={updateProfile}
+                >
+                  <Text style={styles.buttonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              <Button
-                title="Edit Profile"
+              <TouchableOpacity
+                style={[styles.button, styles.editButton]}
                 onPress={() => setIsEditing(true)}
-                style={styles.editButton}
-              />
+              >
+                <Text style={styles.buttonText}>Edit Profile</Text>
+              </TouchableOpacity>
             )}
           </View>
         </Card>
       </ScrollView>
 
-      {renderSettingsModal()}
+      <Modal
+        visible={showSettings}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Settings</Text>
+            <TouchableOpacity 
+              onPress={() => setShowSettings(false)}
+              style={styles.closeButton}
+            >
+              <Feather name="x" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            <Card variant="elevated" style={styles.settingsCard}>
+              <TouchableOpacity style={styles.settingItem}>
+                <Text style={styles.settingText}>Notifications</Text>
+                <Feather name="chevron-right" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.settingItem}>
+                <Text style={styles.settingText}>Privacy</Text>
+                <Feather name="chevron-right" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.settingItem}>
+                <Text style={styles.settingText}>Help & Support</Text>
+                <Feather name="chevron-right" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.settingItem}
+                onPress={handleLogout}
+              >
+                <Text style={styles.settingText}>Log Out</Text>
+                <Feather name="chevron-right" size={20} color={colors.text.secondary} />
+              </TouchableOpacity>
+            </Card>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -205,46 +437,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   scrollView: {
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-  },
-  settingsButton: {
-    padding: 8,
+    flex: 1,
   },
   profileCard: {
+    margin: 16,
     padding: 16,
   },
   imageContainer: {
     alignItems: 'center',
     marginBottom: 24,
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-  imagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.neutral.grey200,
-    justifyContent: 'center',
+  avatarContainer: {
+    position: 'relative',
     alignItems: 'center',
   },
-  imagePlaceholderText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: colors.text.secondary,
+  avatar: {
+    borderRadius: 180,
+    width: 120,
+    
+  },
+  image: {
+    objectFit: 'cover',
+    paddingTop: 0,
+  },
+  noImage: {
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   editImageButton: {
     position: 'absolute',
@@ -257,7 +476,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: colors.background.paper,
+    borderColor: colors.background.default,
   },
   formContainer: {
     gap: 16,
@@ -266,48 +485,77 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  value: {
     fontSize: 16,
-    fontWeight: '600',
     color: colors.text.primary,
   },
   input: {
-    borderWidth: 1,
-    borderColor: colors.neutral.grey300,
-    borderRadius: 8,
-    padding: 12,
     fontSize: 16,
     color: colors.text.primary,
+    backgroundColor: colors.neutral.grey100,
+    padding: 12,
+    borderRadius: 8,
   },
-  activeDaysContainer: {
+  buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
     marginTop: 8,
   },
-  dayButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.neutral.grey300,
+  button: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  editButton: {
+    backgroundColor: colors.primary.main,
+  },
+  saveButton: {
+    backgroundColor: colors.primary.main,
+  },
+  cancelButton: {
+    backgroundColor: colors.neutral.grey300,
+  },
+  buttonText: {
+    color: colors.text.inverse,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  logoutButton: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: colors.neutral.grey300,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: colors.text.inverse,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dayButtonActive: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.main,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral.grey200,
   },
-  dayButtonText: {
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: colors.text.primary,
-    fontSize: 16,
   },
-  dayButtonTextActive: {
-    color: colors.text.inverse,
-  },
-  saveButton: {
-    marginTop: 8,
-  },
-  editButton: {
-    marginTop: 8,
+  settingsButton: {
+    padding: 8,
   },
   modalContainer: {
     flex: 1,
@@ -330,6 +578,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   modalContent: {
+    flex: 1,
     padding: 16,
   },
   settingsCard: {
@@ -347,4 +596,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text.primary,
   },
-}); 
+  uploadingButton: {
+    opacity: 0.7,
+  },
+  imagePlaceholderText: {
+    fontSize: 48,
+    color: colors.text.inverse,
+    fontWeight: 'bold',
+  },
+});

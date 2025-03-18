@@ -10,11 +10,15 @@ import TabNavigator from './TabNavigator';
 
 const Stack = createNativeStackNavigator();
 
-export default function AppNavigator() {
+interface AppNavigatorProps {
+  initialRouteName: string;
+}
+
+export default function AppNavigator({ initialRouteName }: AppNavigatorProps) {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="MainApp"
+        initialRouteName={initialRouteName}
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',

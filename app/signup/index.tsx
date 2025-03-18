@@ -7,13 +7,15 @@ import {
   KeyboardAvoidingView, 
   Platform,
   ScrollView,
-  SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../../navigation/types';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { colors } from '../../theme/colors';
+import { supabase } from '../../utils/supabase';
 
 export default function SignupScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -28,7 +30,6 @@ export default function SignupScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const validateName = (name: string) => {
-    console.log('Validating name:', name);
     if (!name) {
       setNameError('Name is required');
       return false;
@@ -38,7 +39,6 @@ export default function SignupScreen() {
   };
 
   const validateEmail = (email: string) => {
-    console.log('Validating email:', email);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
       setEmailError('Email is required');
@@ -52,7 +52,6 @@ export default function SignupScreen() {
   };
 
   const validatePassword = (password: string) => {
-    console.log('Validating password');
     if (!password) {
       setPasswordError('Password is required');
       return false;
@@ -65,7 +64,6 @@ export default function SignupScreen() {
   };
 
   const validateConfirmPassword = (confirmPassword: string) => {
-    console.log('Validating confirm password');
     if (!confirmPassword) {
       setConfirmPasswordError('Please confirm your password');
       return false;
@@ -77,8 +75,7 @@ export default function SignupScreen() {
     return true;
   };
 
-  const handleSignup = () => {
-    console.log('Signup attempt with:', { name, email, password, confirmPassword });
+  const handleSignup = async () => {
     const isNameValid = validateName(name);
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
@@ -86,17 +83,36 @@ export default function SignupScreen() {
 
     if (isNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid) {
       setIsLoading(true);
-      
-      // Simulate API call
-      console.log('Simulating API call for signup...');
-      setTimeout(() => {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: name,
+            },
+          },
+        });
+
+        if (error) {
+          Alert.alert('Signup Error', error.message);
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.user) {
+          Alert.alert(
+            'Success',
+            'Please check your email to confirm your account',
+            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+          );
+        }
+      } catch (error) {
+        console.error('Signup error:', error);
+        Alert.alert('Error', 'An unexpected error occurred during signup');
+      } finally {
         setIsLoading(false);
-        console.log('Signup successful, navigating to home');
-        // Navigate to home screen after successful signup
-        navigation.navigate('MainApp');
-      }, 1500);
-    } else {
-      console.log('Signup validation failed');
+      }
     }
   };
 
