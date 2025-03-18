@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,47 +6,46 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
-
+  ActivityIndicator,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
+import { supabase } from '../../utils/supabase';
 
-// Sample data for leaderboard
-const sampleUsers = [
-  {
-    id: '1',
-    name: 'Sarah Johnson',
-    streak: 45,
-    imageUri: null,
-  },
-  {
-    id: '2',
-    name: 'Mike Chen',
-    streak: 38,
-    imageUri: null,
-  },
-  {
-    id: '3',
-    name: 'Emma Davis',
-    streak: 32,
-    imageUri: null,
-  },
-  {
-    id: '4',
-    name: 'Alex Thompson',
-    streak: 28,
-    imageUri: null,
-  },
-  {
-    id: '5',
-    name: 'Lisa Wong',
-    streak: 25,
-    imageUri: null,
-  },
-];
+interface User {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  current_streak: number;
+}
 
 export default function LeaderboardScreen() {
-  const renderUserItem = (user: typeof sampleUsers[0], index: number) => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
+
+  const fetchLeaderboard = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, current_streak')
+        .order('current_streak', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderUserItem = (user: User, index: number) => {
     const getRankStyle = () => {
       switch (index) {
         case 0:
@@ -74,20 +73,20 @@ export default function LeaderboardScreen() {
           </View>
           <View style={styles.userInfo}>
             <View style={styles.userImageContainer}>
-              {user.imageUri ? (
-                <Image source={{ uri: user.imageUri }} style={styles.userImage} />
+              {user.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.userImage} />
               ) : (
                 <View style={styles.userImagePlaceholder}>
                   <Text style={styles.userImagePlaceholderText}>
-                    {user.name[0]}
+                    {user.username[0]}
                   </Text>
                 </View>
               )}
             </View>
-            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userName}>{user.username}</Text>
           </View>
           <View style={styles.streakContainer}>
-            <Text style={styles.streakText}>{user.streak}</Text>
+            <Text style={styles.streakText}>{user.current_streak}</Text>
             <Text style={styles.streakLabel}>days</Text>
           </View>
         </View>
@@ -95,15 +94,26 @@ export default function LeaderboardScreen() {
     );
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Leaderboard</Text>
+          <Text style={styles.subtitle}>Top Streaks</Text>
         </View>
 
         <View style={styles.leaderboardList}>
-          {sampleUsers.map((user, index) => renderUserItem(user, index))}
+          {users.map((user, index) => renderUserItem(user, index))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -115,6 +125,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.default,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     padding: 16,
   },
@@ -125,6 +140,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: colors.text.primary,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: colors.text.secondary,
+    marginTop: 4,
   },
   leaderboardList: {
     gap: 12,

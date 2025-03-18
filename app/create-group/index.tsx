@@ -8,45 +8,120 @@ import {
   Image,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '../../utils/supabase';
+import { decode } from 'base64-arraybuffer';
 
 interface CreateGroupScreenProps {
   onClose: () => void;
 }
 
 export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
-  const [groupTitle, setGroupTitle] = useState('');
+  const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [activeDays, setActiveDays] = useState(4);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleCreateGroup = () => {
-    // Create a group object
-    const group = {
-      id: Math.random().toString(36).substr(2, 9), // Generate a random ID
-      title: groupTitle,
-      description,
-      activeDays,
-      imageUri,
-      createdAt: new Date().toISOString(),
-      members: 1, // Start with 1 member (the creator)
-    };
+  const uploadImage = async (uri: string): Promise<string | null> => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      
+      return new Promise((resolve, reject) => {
+        reader.onload = async () => {
+          try {
+            const base64 = reader.result as string;
+            const base64Data = base64.split(',')[1];
+            const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpeg';
+            const path = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+              .from('group-images')
+              .upload(path, decode(base64Data), {
+                contentType: `image/${fileExt}`,
+              });
 
-    console.log('Created group:', group);
-    // In a real app, this would save to a backend
-    onClose();
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+              .from('group-images')
+              .getPublicUrl(path);
+
+            resolve(publicUrl);
+          } catch (error) {
+            console.error('Error uploading image:', error);
+            reject(error);
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error preparing image:', error);
+      return null;
+    }
+  };
+
+  const handleCreateGroup = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter a group name');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let image_url = null;
+      if (imageUri) {
+        image_url = await uploadImage(imageUri);
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user logged in');
+
+      const { data, error } = await supabase
+        .from('groups')
+        .insert([
+          {
+            name: name.trim(),
+            description: description.trim(),
+            image_url,
+            created_by: user.id
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update the creator's profile with the group_id
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ group_id: data.id })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      Alert.alert('Success', 'Group created successfully!');
+      onClose();
+    } catch (error) {
+      console.error('Error creating group:', error);
+      Alert.alert('Error', 'Failed to create group. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImagePick = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
+      aspect: [1, 1],
+      quality: 0.8,
     });
 
     if (!result.canceled) {
@@ -69,12 +144,12 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
           </TouchableOpacity>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Group Title</Text>
+            <Text style={styles.label}>Group Name</Text>
             <TextInput
               style={styles.input}
-              value={groupTitle}
-              onChangeText={setGroupTitle}
-              placeholder="Enter group title"
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter group name"
               placeholderTextColor={colors.text.secondary}
             />
 
@@ -88,35 +163,13 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
               multiline
               numberOfLines={4}
             />
-
-            <Text style={styles.label}>Active Days per Week</Text>
-            <View style={styles.activeDaysContainer}>
-              {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-                <TouchableOpacity
-                  key={day}
-                  style={[
-                    styles.dayButton,
-                    activeDays === day && styles.dayButtonActive,
-                  ]}
-                  onPress={() => setActiveDays(day)}
-                >
-                  <Text
-                    style={[
-                      styles.dayButtonText,
-                      activeDays === day && styles.dayButtonTextActive,
-                    ]}
-                  >
-                    {day}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
 
           <Button
-            title="Create Group"
+            title={loading ? "Creating..." : "Create Group"}
             onPress={handleCreateGroup}
             style={styles.createButton}
+            disabled={loading}
           />
         </Card>
       </ScrollView>
@@ -131,14 +184,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     padding: 16,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text.primary,
   },
   formCard: {
     padding: 16,
@@ -163,6 +208,8 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     color: colors.text.secondary,
     fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 10,
   },
   inputContainer: {
     gap: 16,
@@ -183,31 +230,6 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-  },
-  activeDaysContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  dayButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.neutral.grey300,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dayButtonActive: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.main,
-  },
-  dayButtonText: {
-    color: colors.text.primary,
-    fontSize: 16,
-  },
-  dayButtonTextActive: {
-    color: colors.text.inverse,
   },
   createButton: {
     marginTop: 24,
