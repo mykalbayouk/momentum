@@ -10,7 +10,8 @@ import {
   Image,
   Alert,
   TextInput,
-  ImageStyle
+  ImageStyle,
+  Linking
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
@@ -268,6 +269,27 @@ export default function ProfileScreen() {
     }
   }
 
+  const handleHelp = () => {
+    Alert.alert(
+      'Help & Contact',
+      'Visit my website for more information or to get in touch.',
+      [
+        {
+          text: 'Website',
+          onPress: () => Linking.openURL('https://www.michaelbayouk.com')
+        },
+        {
+          text: 'Contact',
+          onPress: () => Linking.openURL('https://www.michaelbayouk.com/contact')
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
+  }
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -404,15 +426,19 @@ export default function ProfileScreen() {
           </View>
           <ScrollView style={styles.modalContent}>
             <Card variant="elevated" style={styles.settingsCard}>
-              <TouchableOpacity style={styles.settingItem}>
+              {/* <TouchableOpacity style={styles.settingItem}
+              >
                 <Text style={styles.settingText}>Notifications</Text>
                 <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.settingItem}>
+              </TouchableOpacity> */}
+              {/* <TouchableOpacity style={styles.settingItem}>
                 <Text style={styles.settingText}>Privacy</Text>
                 <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.settingItem}>
+              </TouchableOpacity> */}
+              <TouchableOpacity 
+              style={styles.settingItem}
+              onPress={handleHelp}
+              >
                 <Text style={styles.settingText}>Help & Support</Text>
                 <Feather name="chevron-right" size={20} color={colors.text.secondary} />
               </TouchableOpacity>

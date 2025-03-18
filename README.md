@@ -42,5 +42,36 @@ This app is currently in development. Key features implemented:
 - ✅ Progress tracking
     - ✅ Create Log Workout Page
 - ✅ Basic UI components
-- 🚧 Social features (in progress)
-- 🚧 User authentication (in progress)
+- ✅ Social features (in progress)
+- ✅ User authentication (in progress)
+
+MVP Completed:
+- Groups
+    - Create Group
+    - Join Group
+    - View Group
+- Log Workout
+- View Calendar
+    - View Streaks
+- View Progress
+- View Leaderboard
+- View Profile
+- View Settings
+    - Help & Support
+    - Logout
+
+
+## Next Steps
+- Bug Fixes
+    - Images are not shown properly in image viewports
+    - Data is not updating realtime
+        - Creation of group, logging workout, etc. (Belive Realtime database will fix this)
+- Styling Improvements
+- More Features
+    - Add Point System
+    - Add Streak Challenges
+    - Add Rewards
+    - Add Achievements
+    - Add Leaderboard
+    - Add Notifications
+    - Add Settings
