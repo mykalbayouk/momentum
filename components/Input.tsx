@@ -14,6 +14,10 @@ interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   helper?: string;
+  style?: ViewStyle;
+  labelStyle?: TextStyle;
+  errorStyle?: TextStyle;
+  helperStyle?: TextStyle;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -77,7 +81,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   } as TextStyle,
   inputError: {
-    borderColor: colors.semantic.error,
+    borderColor: colors.semantic.error.main,
   } as ViewStyle,
   multilineInput: {
     minHeight: 100,
@@ -91,7 +95,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   } as TextStyle,
   errorText: {
-    color: colors.semantic.error,
+    color: colors.text.primary,
   } as TextStyle,
 });
 

@@ -136,8 +136,7 @@ export default function LoginScreen() {
               label="Email"
               placeholder="Enter your email"
               value={email}
-              onChangeText={(text) => {
-                console.log('Email input changed:', text);
+              onChangeText={(text) => {                
                 setEmail(text);
               }}
               keyboardType="email-address"
@@ -151,7 +150,6 @@ export default function LoginScreen() {
               placeholder="Enter your password"
               value={password}
               onChangeText={(text) => {
-                console.log('Password input changed');
                 setPassword(text);
               }}
               secureTextEntry
@@ -177,7 +175,6 @@ export default function LoginScreen() {
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => {
-              console.log('Sign up link pressed');
               navigation.navigate('Signup');
             }}>
               <Text style={styles.signupText}>Sign Up</Text>

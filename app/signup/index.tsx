@@ -29,11 +29,30 @@ export default function SignupScreen() {
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateName = (name: string) => {
+  const validateName = async (name: string) => {
     if (!name) {
       setNameError('Name is required');
       return false;
     }
+    
+    // Check if username already exists
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', name)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+      console.error('Error checking username:', error);
+      setNameError('Error checking username availability');
+      return false;
+    }
+
+    if (data) {
+      setNameError('Username is already taken');
+      return false;
+    }
+
     setNameError('');
     return true;
   };
@@ -76,43 +95,51 @@ export default function SignupScreen() {
   };
 
   const handleSignup = async () => {
-    const isNameValid = validateName(name);
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-    const isConfirmPasswordValid = validateConfirmPassword(confirmPassword);
+    setIsLoading(true);
+    try {
+      // Validate all fields
+      const isEmailValid = validateEmail(email);
+      const isPasswordValid = validatePassword(password);
+      const isConfirmPasswordValid = validateConfirmPassword(confirmPassword);
+      const isNameValid = await validateName(name);
 
-    if (isNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid) {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              username: name,
-            },
-          },
-        });
-
-        if (error) {
-          Alert.alert('Signup Error', error.message);
-          setIsLoading(false);
-          return;
-        }
-
-        if (data?.user) {
-          Alert.alert(
-            'Success',
-            'Please check your email to confirm your account',
-            [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-          );
-        }
-      } catch (error) {
-        console.error('Signup error:', error);
-        Alert.alert('Error', 'An unexpected error occurred during signup');
-      } finally {
+      if (!isNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
         setIsLoading(false);
+        return;
       }
+
+      // Attempt to sign up
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: name,
+          },
+        },
+      });
+
+      if (error) {
+        if (error.message.includes('email')) {
+          setEmailError('This email is already registered');
+        } else {
+          Alert.alert('Signup Error', error.message);
+        }
+        return;
+      }
+
+      if (data?.user) {
+        Alert.alert(
+          'Success',
+          'Please check your email to confirm your account',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      Alert.alert('Error', 'An unexpected error occurred during signup');
+    } finally {
+      setIsLoading(false);
     }
   };
 
