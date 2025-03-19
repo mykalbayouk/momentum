@@ -21,7 +21,7 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
-type WorkoutType = 'running' | 'cycling' | 'swimming' | 'yoga' | 'strength_training' | 'hiit' | 'walking' | 'dancing' | 'sports' | 'other';
+type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
 
 interface WorkoutModalProps {
   visible: boolean;
@@ -40,7 +40,7 @@ interface WorkoutModalProps {
 
 export default function WorkoutModal({ visible, onClose, onUpdate, workout }: WorkoutModalProps) {
   const { session } = useAuth();
-  const [workoutType, setWorkoutType] = useState<WorkoutType>(workout?.workout_type || 'running');
+  const [workoutType, setWorkoutType] = useState<WorkoutType>(workout?.workout_type || 'Running');
   const [duration, setDuration] = useState(workout?.duration.replace(' minutes', '') || '');
   const [intensity, setIntensity] = useState(workout?.intensity || 5);
   const [notes, setNotes] = useState(workout?.notes || '');
@@ -50,8 +50,16 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
   const [error, setError] = useState<string | null>(null);
 
   const workoutTypes: WorkoutType[] = [
-    'running', 'cycling', 'swimming', 'yoga', 'strength_training',
-    'hiit', 'walking', 'dancing', 'sports', 'other'
+    'Strength Training',
+    'Running',
+    'Swimming', 
+    'Climbing',
+    'Cycling',
+    'Hiking',
+    'Boxing',
+    'Sports',
+    'Yoga',
+    'Other'
   ];
 
   useEffect(() => {
@@ -84,10 +92,26 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
         .from('workout-images')
         .getPublicUrl(filePath);
 
-      return publicUrl;
+      return { url: publicUrl, path: filePath };
     } catch (error) {
       console.error('Error uploading image:', error);
       throw new Error('Failed to upload image');
+    }
+  };
+
+  const deleteOldImage = async (url: string) => {
+    try {
+      // Extract the file path from the URL
+      const urlParts = url.split('/');
+      const filePath = `${urlParts[urlParts.length - 2]}/${urlParts[urlParts.length - 1]}`;
+      
+      const { error } = await supabase.storage
+        .from('workout-images')
+        .remove([filePath]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting old image:', error);
     }
   };
 
@@ -102,8 +126,18 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
     
     try {
       let imageUrl = imageUri;
+      let newImagePath = null;
+
       if (imageUri && !imageUri.startsWith('http')) {
-        imageUrl = await uploadImage(imageUri);
+        // New image being uploaded
+        const uploadResult = await uploadImage(imageUri);
+        imageUrl = uploadResult.url;
+        newImagePath = uploadResult.path;
+
+        // If updating and there was a previous image, delete it
+        if (workout?.image_url) {
+          await deleteOldImage(workout.image_url);
+        }
       }
 
       const durationMinutes = parseInt(duration) || 0;
@@ -124,27 +158,52 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
 
         if (updateError) throw updateError;
       } else {
-        // Check if a workout already exists for today
+        // Check for yesterday's workout to determine streak
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        today.setHours(23, 59, 59, 999);
 
-        const { data: existingWorkout, error: checkError } = await supabase
+        const { data: yesterdayWorkout, error: yesterdayError } = await supabase
           .from('workout_logs')
-          .select('id')
+          .select('completed_at')
           .eq('user_id', session.user.id)
-          .gte('completed_at', today.toISOString())
-          .lt('completed_at', tomorrow.toISOString())
+          .gte('completed_at', yesterday.toISOString())
+          .lt('completed_at', today.toISOString())
+          .order('completed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (yesterdayError) throw yesterdayError;
+
+        // Get current profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('current_streak, longest_streak')
+          .eq('id', session.user.id)
           .single();
 
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-          throw checkError;
+        if (profileError) throw profileError;
+
+        // Calculate new streak
+        let newStreak = 1; // Default to 1 for first workout
+        if (yesterdayWorkout) {
+          // If there was a workout yesterday, increment the current streak
+          newStreak = profileData.current_streak + 1;
         }
 
-        if (existingWorkout) {
-          throw new Error('You have already logged a workout for today');
-        }
+        const longestStreak = Math.max(newStreak, profileData.longest_streak);
+
+        const { error: updateStreakError } = await supabase
+          .from('profiles')
+          .update({
+            current_streak: newStreak,
+            longest_streak: longestStreak,
+          })
+          .eq('id', session.user.id);
+
+        if (updateStreakError) throw updateStreakError;
 
         // Create new workout
         const { error: insertError } = await supabase
@@ -160,28 +219,6 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
           });
 
         if (insertError) throw insertError;
-
-        // Update streaks only for new workouts
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('current_streak, longest_streak')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        const currentStreak = profileData.current_streak + 1;
-        const longestStreak = Math.max(currentStreak, profileData.longest_streak);
-
-        const { error: updateStreakError } = await supabase
-          .from('profiles')
-          .update({
-            current_streak: currentStreak,
-            longest_streak: longestStreak,
-          })
-          .eq('id', session.user.id);
-
-        if (updateStreakError) throw updateStreakError;
       }
 
       onUpdate();
@@ -197,8 +234,8 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
   const handleImagePick = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        mediaTypes: "images",
+        allowsEditing: false,
         aspect: [4, 3],
         quality: 0.8,
       });

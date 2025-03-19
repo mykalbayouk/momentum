@@ -7,10 +7,12 @@ import {
   SafeAreaView,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
 import { supabase } from '../../utils/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -24,26 +26,53 @@ export default function LeaderboardScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Subscribe to profile changes
+    const subscription = supabase
+      .channel('leaderboard-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+        },
+        () => {
+          // Refresh leaderboard data when any profile changes
+          fetchLeaderboard();
+        }
+      )
+      .subscribe();
+
+    // Initial data fetch
     fetchLeaderboard();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const fetchLeaderboard = async () => {
+  async function fetchLeaderboard() {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url, current_streak')
+        .select('*')
         .order('current_streak', { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
-      setUsers(data || []);
+      if (data) {
+        setUsers(data);
+      }
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const renderUserItem = (user: User, index: number) => {
     const getRankStyle = () => {

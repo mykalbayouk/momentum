@@ -40,6 +40,20 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
             const base64Data = base64.split(',')[1];
             const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpeg';
             const path = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+            // Delete old image if it exists
+            if (imageUri?.startsWith('http')) {
+              try {
+                const urlParts = imageUri.split('/');
+                const oldFilePath = urlParts[urlParts.length - 1];
+                await supabase.storage
+                  .from('group-images')
+                  .remove([oldFilePath]);
+              } catch (error) {
+                console.error('Error deleting old group image:', error);
+              }
+            }
+
             const { error: uploadError } = await supabase.storage
               .from('group-images')
               .upload(path, decode(base64Data), {

@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ViewStyle,
+  Alert,
 } from 'react-native';
 import Card from '../../components/Card';
 import Badge from '../../components/Badge';
@@ -17,7 +18,8 @@ import { colors } from '../../theme/colors';
 import { supabase } from '../../utils/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-type WorkoutType = 'running' | 'cycling' | 'swimming' | 'yoga' | 'strength_training' | 'hiit' | 'walking' | 'dancing' | 'sports' | 'other';
+
+type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
 
 interface WorkoutLog {
   id: string;
@@ -30,52 +32,103 @@ interface WorkoutLog {
 }
 
 interface Profile {
+  id: string;
+  username: string;
   current_streak: number;
   longest_streak: number;
+  streak_count: number;
+  weekly_goal: number;
+  weekly_progress: number;
 }
 
 export default function HomeScreen() {
   const { session } = useAuth();
-  const [currentStreak, setCurrentStreak] = useState(0);
-  const [longestStreak, setLongestStreak] = useState(0);
-  const [progress, setProgress] = useState(0.7);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
-  const [markedDates, setMarkedDates] = useState<{ [date: string]: any }>({});
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutLog | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [markedDates, setMarkedDates] = useState<any>({});
+  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<{ dateString: string } | null>(null);
 
   useEffect(() => {
-    if (session?.user) {
-      loadProfileData();
-      loadWorkoutLogs();
-    }
+    if (!session?.user) return;
+
+    // Subscribe to profile changes
+    const profileSubscription = supabase
+      .channel('home-profile-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${session.user.id}`,
+        },
+        async (payload) => {
+          const newProfile = payload.new as Profile;
+          setProfile(newProfile);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to workout log changes
+    const workoutSubscription = supabase
+      .channel('home-workout-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workout_logs',
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        () => {
+          // Refresh workout logs when changes occur
+          loadWorkoutLogs();
+        }
+      )
+      .subscribe();
+
+    // Initial data fetch
+    loadProfileData();
+    loadWorkoutLogs();
+
+    return () => {
+      profileSubscription.unsubscribe();
+      workoutSubscription.unsubscribe();
+    };
   }, [session]);
 
   async function loadProfileData() {
     try {
+      setLoading(true);
+      if (!session?.user) throw new Error('No user on the session!');
+
       const { data, error } = await supabase
         .from('profiles')
-        .select('current_streak, longest_streak')
-        .eq('id', session?.user.id)
+        .select('*')
+        .eq('id', session.user.id)
         .single();
 
       if (error) throw error;
-
-      if (data) {
-        setCurrentStreak(data.current_streak);
-        setLongestStreak(data.longest_streak);
-      }
+      if (data) setProfile(data);
     } catch (error) {
-      console.error('Error loading profile data:', error);
+      if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
   async function loadWorkoutLogs() {
     try {
+      if (!session?.user?.id) return;
+
       const { data, error } = await supabase
         .from('workout_logs')
         .select('id, completed_at, workout_type, duration, intensity, notes, image_url')
-        .eq('user_id', session?.user.id)
+        .eq('user_id', session.user.id)
         .order('completed_at', { ascending: true });
 
       if (error) throw error;
@@ -158,14 +211,17 @@ export default function HomeScreen() {
   }
 
   const handleDayPress = (date: { dateString: string }) => {
-    // Find workouts for the selected date
+    if (!session?.user?.id) return;
+
+    // Find workouts for the selected date and current user
     const dayWorkouts = workoutLogs.filter(
-      workout => workout.completed_at.split('T')[0] === date.dateString
+      workout => 
+        workout.completed_at.split('T')[0] === date.dateString
     );
     
     if (dayWorkouts.length > 0) {
-      setSelectedWorkout(dayWorkouts[0]);
-      setIsModalVisible(true);
+      setSelectedDate(date);
+      setShowWorkoutModal(true);
     }
   };
 
@@ -179,11 +235,11 @@ export default function HomeScreen() {
         <View style={styles.streaksContainer}>
           <Card variant="elevated" style={{ ...styles.streakCard, backgroundColor: colors.primary.main }}>
             <Text style={styles.streakLabel}>Current Streak</Text>
-            <Text style={styles.streakValue}>{currentStreak} days</Text>
+            <Text style={styles.streakValue}>{profile?.current_streak || 0} days</Text>
           </Card>
           <Card variant="elevated" style={styles.streakCard}>
             <Text style={styles.streakLabel}>Longest Streak</Text>
-            <Text style={styles.streakValue}>{longestStreak} days</Text>
+            <Text style={styles.streakValue}>{profile?.longest_streak || 0} days</Text>
           </Card>
         </View>
 
@@ -194,11 +250,11 @@ export default function HomeScreen() {
           content={
             <View style={styles.progressContent}>
               <ProgressBar 
-                progress={progress} 
+                progress={profile?.weekly_progress || 0} 
                 height={8}
               />
               <Text style={styles.progressText}>
-                You're {Math.round(progress * 100)}% of the way to your weekly goal!
+                You're {Math.round((profile?.weekly_progress || 0) * 100)}% of the way to your weekly goal!
               </Text>
             </View>
           }
@@ -219,13 +275,14 @@ export default function HomeScreen() {
       </ScrollView>
 
       <WorkoutModal
-        visible={isModalVisible}
+        visible={showWorkoutModal}
         onClose={() => {
-          setIsModalVisible(false);
-          setSelectedWorkout(null);
+          setShowWorkoutModal(false);
         }}
         onUpdate={loadWorkoutLogs}
-        workout={selectedWorkout || undefined}
+        workout={workoutLogs.find(w => 
+          w.completed_at.split('T')[0] === selectedDate?.dateString
+        )}
       />
     </SafeAreaView>
   );

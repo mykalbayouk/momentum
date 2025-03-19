@@ -17,6 +17,15 @@ import Button from '../../components/Button';
 import Feather from 'react-native-vector-icons/Feather';
 import CreateGroupScreen from '../create-group/index';
 import { supabase } from '../../utils/supabase';
+import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
+interface Profile {
+  id: string;
+  group_id: string | null;
+  username: string;
+  avatar_url: string | null;
+  current_streak: number;
+}
 
 interface Group {
   id: string;
@@ -41,26 +50,40 @@ interface GroupDetailsProps {
   group: CurrentGroup;
   showJoinButton?: boolean;
   onJoinPress?: () => void;
+  onLeavePress?: () => void;
+  showLeaveButton?: boolean;
   containerStyle?: any;
 }
 
 const GroupDetails: React.FC<GroupDetailsProps> = ({
   group,
   showJoinButton = false,
+  showLeaveButton = false,
   onJoinPress = () => {},
+  onLeavePress = () => {},
   containerStyle,
 }) => {
   return (
     <ScrollView style={[styles.scrollView, containerStyle]}>
       <View style={styles.header}>
         <Text style={styles.title}>{group.name}</Text>
-        {showJoinButton && (
-          <Button
-            title="Join Group"
-            onPress={onJoinPress}
-            style={styles.joinGroupButton}
-          />
-        )}
+        <View style={styles.headerButtons}>
+          {showJoinButton && (
+            <Button
+              title="Join Group"
+              onPress={onJoinPress}
+              style={styles.joinGroupButton}
+            />
+          )}
+          {showLeaveButton && (
+            <TouchableOpacity
+              style={styles.leaveButton}
+              onPress={onLeavePress}
+            >
+              <Text style={styles.leaveButtonText}>Leave Group</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <Card variant="elevated" style={styles.groupDetailsCard}>
@@ -112,7 +135,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
   );
 };
 
-export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPress: () => void }) {
+export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPress?: () => void }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [groupCode, setGroupCode] = useState('');
   const [groups, setGroups] = useState<Group[]>([]);
@@ -120,21 +143,154 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<CurrentGroup | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    checkUserGroup();
+    // Get initial user and set up auth subscription
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id || null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    // Subscribe to profile changes
+    const profileSubscription = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        },
+        async (payload: RealtimePostgresChangesPayload<Profile>) => {
+          const newProfile = payload.new as Profile;
+          if (newProfile.group_id) {
+            // User joined/switched groups
+            const { data: groupData, error: groupError } = await supabase
+              .from('groups')
+              .select(`
+                id,
+                name,
+                description,
+                image_url,
+                created_at,
+                members:profiles!profiles_group_id_fkey(
+                  id,
+                  username,
+                  avatar_url,
+                  current_streak
+                )
+              `)
+              .eq('id', newProfile.group_id)
+              .single();
+
+            if (!groupError && groupData) {
+              setCurrentGroup(groupData);
+              setGroups([]);
+            }
+          } else {
+            // User left group
+            setCurrentGroup(null);
+            fetchAvailableGroups();
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to group member changes when in a group
+    let groupSubscription: RealtimeChannel | null = null;
+    if (currentGroup) {
+      groupSubscription = supabase
+        .channel('group-member-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `group_id=eq.${currentGroup.id}`,
+          },
+          async () => {
+            // Refresh group data when members change
+            const { data: groupData, error: groupError } = await supabase
+              .from('groups')
+              .select(`
+                id,
+                name,
+                description,
+                image_url,
+                created_at,
+                members:profiles!profiles_group_id_fkey(
+                  id,
+                  username,
+                  avatar_url,
+                  current_streak
+                )
+              `)
+              .eq('id', currentGroup.id)
+              .single();
+
+            if (!groupError && groupData) {
+              setCurrentGroup(groupData);
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    // Initial data fetch
+    checkUserGroup();
+
+    return () => {
+      profileSubscription.unsubscribe();
+      if (groupSubscription) {
+        groupSubscription.unsubscribe();
+      }
+    };
+  }, [userId, currentGroup?.id]);
+
+  const fetchAvailableGroups = async () => {
+    const { data: availableGroups, error: groupsError } = await supabase
+      .from('groups')
+      .select(`
+        id,
+        name,
+        description,
+        image_url,
+        created_at,
+        profiles!profiles_group_id_fkey(count)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (!groupsError) {
+      setGroups(availableGroups || []);
+    }
+  };
 
   const checkUserGroup = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user logged in');
+      if (!userId) return;
 
       // Get user's group_id from profiles
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('group_id')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (profileError) throw profileError;
@@ -162,21 +318,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
         if (groupError) throw groupError;
         setCurrentGroup(groupData);
       } else {
-        // User is not in a group, fetch available groups
-        const { data: availableGroups, error: groupsError } = await supabase
-          .from('groups')
-          .select(`
-            id,
-            name,
-            description,
-            image_url,
-            created_at,
-            profiles!profiles_group_id_fkey(count)
-          `)
-          .order('created_at', { ascending: false });
-
-        if (groupsError) throw groupsError;
-        setGroups(availableGroups || []);
+        await fetchAvailableGroups();
       }
     } catch (error) {
       console.error('Error checking user group:', error);
@@ -224,24 +366,33 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
   };
 
   const handleConfirmJoin = async () => {
-    if (!selectedGroup) return;
+    if (!selectedGroup || !userId) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user logged in');
-
       const { error } = await supabase
         .from('profiles')
         .update({ group_id: selectedGroup.id })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       if (error) throw error;
-
-      // Refresh the screen
       setSelectedGroup(null);
-      checkUserGroup();
     } catch (error) {
       console.error('Error joining group:', error);
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ group_id: null })
+        .eq('id', userId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error leaving group:', error);
     }
   };
 
@@ -288,7 +439,11 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
   if (currentGroup) {
     return (
       <SafeAreaView style={styles.container}>
-        <GroupDetails group={currentGroup} />
+        <GroupDetails 
+          group={currentGroup} 
+          showLeaveButton={true}
+          onLeavePress={handleLeaveGroup}
+        />
       </SafeAreaView>
     );
   }
@@ -338,15 +493,18 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
         </Card>
 
         <Text style={styles.sectionTitle}>Available Groups</Text>
-        <View style={styles.groupsList}>
-          {groups.length === 0 ? (
-            <Card variant="elevated" style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No groups available</Text>
-            </Card>
-          ) : (
-            groups.map(group => renderGroupItem({ item: group }))
-          )}
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary.main} />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : groups === null || groups.length === 0 ? (
+          <Card variant="elevated" style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No available groups</Text>
+            <Text style={styles.emptySubtext}>Create or join a group to get started</Text>
+          </Card>
+        ) : (
+          groups.map(group => renderGroupItem({ item: group }))
+        )}
       </ScrollView>
 
       <Modal
@@ -544,12 +702,25 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   emptyCard: {
-    padding: 16,
+    padding: 24,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
     color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginTop: 24,
   },
   // New styles for current group view
   groupDetailsCard: {
@@ -617,5 +788,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.secondary,
     marginTop: 2,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  leaveButton: {
+    backgroundColor: colors.semantic.error.main,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  leaveButtonText: {
+    color: colors.text.inverse,
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

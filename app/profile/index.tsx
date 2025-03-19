@@ -32,140 +32,13 @@ interface Profile {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  current_streak: number;
+  longest_streak: number;
+  streak_count: number;
+  weekly_goal: number;
+  weekly_progress: number;
 }
 
-interface AvatarProps {
-  size: number;
-  url: string | null;
-  onUpload: (filePath: string) => void;
-}
-
-function Avatar({ url, size = 150, onUpload }: AvatarProps) {
-  const [uploading, setUploading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const avatarSize = { height: size, width: size };
-
-  useEffect(() => {
-    if (url) {
-      if (url.startsWith('http')) {
-        setAvatarUrl(url);
-        return;
-      }
-      downloadImage(url);
-    }
-  }, [url]);
-
-  async function downloadImage(path: string) {
-    try {
-      const fileName = path.split('/').pop();
-      if (!fileName) throw new Error('Invalid file path');
-
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .download(fileName);
-
-      if (error) {
-        throw error;
-      }
-
-      const fr = new FileReader();
-      fr.readAsDataURL(data);
-      fr.onload = () => {
-        setAvatarUrl(fr.result as string);
-      };
-    } catch (error) {
-      if (error instanceof Error) {
-        console.log('Error downloading image: ', error.message);
-        setAvatarUrl(url);
-      }
-    }
-  }
-
-  async function uploadAvatar() {
-    try {
-      setUploading(true);
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: false,
-        allowsEditing: true,
-        quality: 1,
-        exif: false,
-      });
-
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        console.log('User cancelled image picker.');
-        return;
-      }
-
-      const image = result.assets[0];
-      console.log('Got image', image);
-
-      if (!image.uri) {
-        throw new Error('No image uri!');
-      }
-
-      // Read the file as a Base64-encoded string using Expo's FileSystem
-      const base64 = await FileSystem.readAsStringAsync(image.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Decode the Base64 string to an ArrayBuffer
-      const arrayBuffer = decode(base64);
-
-      const fileExt = image.uri?.split('.').pop()?.toLowerCase() ?? 'jpeg';
-      const path = `${Date.now()}.${fileExt}`;
-      
-      const { data, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, arrayBuffer, {
-          contentType: image.mimeType ?? 'image/jpeg',
-          upsert: true,
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      onUpload(data.path);
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message);
-      } else {
-        throw error;
-      }
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return (
-    <View style={styles.avatarContainer}>
-      {avatarUrl ? (
-        <Image
-          source={{ uri: avatarUrl }}
-          accessibilityLabel="Avatar"
-          style={[avatarSize, styles.avatar, styles.image]}
-        />
-      ) : (
-        <View style={[avatarSize, styles.avatar, styles.noImage]}>
-          <Text style={styles.imagePlaceholderText}>?</Text>
-        </View>
-      )}
-      <TouchableOpacity 
-        style={[styles.editImageButton, uploading && styles.uploadingButton]}
-        onPress={uploadAvatar}
-        disabled={uploading}
-      >
-        <Feather 
-          name={uploading ? "loader" : "camera"} 
-          size={20} 
-          color={colors.text.inverse} 
-        />
-      </TouchableOpacity>
-    </View>
-  );
-}
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -181,15 +54,43 @@ export default function ProfileScreen() {
       setSession(session);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (session) {
-      getProfile();
-    }
+    if (!session?.user) return;
+
+    // Subscribe to profile changes
+    const subscription = supabase
+      .channel('profile-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${session.user.id}`,
+        },
+        async (payload) => {
+          const newProfile = payload.new as Profile;
+          setProfile(newProfile);
+          setUsername(newProfile.username || '');
+        }
+      )
+      .subscribe();
+
+    // Initial data fetch
+    getProfile();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [session]);
 
   async function getProfile() {
@@ -232,9 +133,7 @@ export default function ProfileScreen() {
 
       if (error) throw error;
 
-      await getProfile();
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {
       if (error instanceof Error) {
         Alert.alert('Error', error.message);
@@ -245,11 +144,17 @@ export default function ProfileScreen() {
   async function handleAvatarUpload(filePath: string) {
     try {
       if (!session?.user) throw new Error('No user on the session!');
+      if (!profile) throw new Error('No profile data available!');
 
+      // Store the old avatar URL before updating
+      const oldAvatarUrl = profile.avatar_url;
+
+      // Get the public URL for the new avatar
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
+      // Update profile with new avatar URL
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -259,6 +164,20 @@ export default function ProfileScreen() {
         .eq('id', session.user.id);
 
       if (updateError) throw updateError;
+
+      // After successful update, delete the old avatar if it exists
+      if (oldAvatarUrl && oldAvatarUrl.startsWith('http')) {
+        try {
+          const urlParts = oldAvatarUrl.split('/');
+          const oldFilePath = urlParts[urlParts.length - 1];
+          await supabase.storage
+            .from('avatars')
+            .remove([oldFilePath]);
+        } catch (error) {
+          console.error('Error deleting old avatar:', error);
+          // Don't throw here - we still want to complete the update
+        }
+      }
 
       await getProfile();
       Alert.alert('Success', 'Avatar updated successfully');
@@ -366,6 +285,26 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <Text style={styles.value}>{profile.email}</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Current Streak</Text>
+              <Text style={styles.value}>{profile.current_streak} days</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Longest Streak</Text>
+              <Text style={styles.value}>{profile.longest_streak} days</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Total Streak Count</Text>
+              <Text style={styles.value}>{profile.streak_count} days</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Weekly Goal Progress</Text>
+              <Text style={styles.value}>{Math.round((profile.weekly_progress || 0) * 100)}%</Text>
             </View>
 
             <View style={styles.inputGroup}>

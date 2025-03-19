@@ -63,9 +63,12 @@ MVP Completed:
 
 ## Next Steps
 - Bug Fixes
-    - Images are not shown properly in image viewports
-    - Data is not updating realtime
-        - Creation of group, logging workout, etc. (Belive Realtime database will fix this)
+    - 🟨 Images are not shown properly in image viewports
+    - ✅ Data is not updating realtime
+        - ✅ Creation of group, logging workout, etc. (Belive Realtime database will fix this)
+    - Calender Streak Styling is not correct
+    - Need to adjust how trying to log multiple workouts on the same day
+    - Streak Calculation needs to be fixed
 - Styling Improvements
 - More Features
     - Add Point System
