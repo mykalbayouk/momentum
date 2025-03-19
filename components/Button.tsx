@@ -160,16 +160,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   primaryText: {
-    color: colors.text.inverse,
+    color: colors.text.primary,
   },
   secondaryText: {
-    color: colors.text.inverse,
+    color: colors.text.primary,
   },
   outlineText: {
-    color: colors.primary.main,
+    color: colors.text.primary,
   },
   textButtonText: {
-    color: colors.primary.main,
+    color: colors.text.primary,
   },
   disabledText: {
     color: colors.text.disabled,

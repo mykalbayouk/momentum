@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 16,
     color: colors.text.primary,
-    backgroundColor: colors.neutral.grey100,
+    backgroundColor: colors.neutral.grey800,
     padding: 12,
     borderRadius: 8,
   },
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral.grey300,
   },
   buttonText: {
-    color: colors.text.inverse,
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.grey200,
+    borderBottomColor: colors.neutral.grey800,
   },
   title: {
     fontSize: 24,
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.grey200,
+    borderBottomColor: colors.neutral.grey800,
   },
   modalTitle: {
     fontSize: 20,

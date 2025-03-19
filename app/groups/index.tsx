@@ -458,7 +458,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
             onPress={onCreateGroupPress}
           >
             <View style={styles.createButtonContent}>
-              <Feather name="plus" size={20} color={colors.text.inverse} />
+              <Feather name="plus" size={20} color={colors.text.primary} />
               <Text style={styles.createButtonText}>Create Group</Text>
             </View>
           </TouchableOpacity>
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createButtonText: {
-    color: colors.text.inverse,
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.grey200,
+    borderBottomColor: colors.neutral.grey800,
   },
   modalTitle: {
     fontSize: 20,
