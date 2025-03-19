@@ -20,9 +20,6 @@ import { supabase } from '../../utils/supabase';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../../navigation/types';
 import { Session } from '@supabase/supabase-js';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
 import ImageUpload from '../../components/ImageUpload';
 
 interface Profile {
@@ -211,9 +208,14 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
+      setShowSettings(false);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      navigation.navigate('Landing');
+      // Reset the navigation stack and navigate to Landing
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Landing' }],
+      });
     } catch (error) {
       if (error instanceof Error) {
         Alert.alert('Error', error.message);
@@ -295,12 +297,7 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Longest Streak</Text>
               <Text style={styles.value}>{profile.longest_streak} days</Text>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Total Streak Count</Text>
-              <Text style={styles.value}>{profile.streak_count} days</Text>
-            </View>
+            </View>            
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Weekly Goal Progress</Text>

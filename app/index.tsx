@@ -3,16 +3,17 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  Image, 
   Dimensions, 
   FlatList, 
-  TouchableOpacity,
   Animated
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../navigation/types';
 import Button from '../components/Button';
 import { colors } from '../theme/colors';
+import ScaleIcon from '../components/icons/ScaleIcon';
+import LiftingIcon from '../components/icons/LiftingIcon';
+import BoxingIcon from '../components/icons/BoxingIcon';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,7 +21,7 @@ interface OnboardingItem {
   id: string;
   title: string;
   description: string;
-  image: any;
+  component: React.ComponentType<{ width?: number; height?: number; color?: string }>;
 }
 
 const onboardingData: OnboardingItem[] = [
@@ -28,26 +29,26 @@ const onboardingData: OnboardingItem[] = [
     id: '1',
     title: 'Track Your Workouts',
     description: 'Log your daily workouts and build a consistent routine to achieve your fitness goals.',
-    image: require('../assets/images/placeholder1.png'),
+    component: ScaleIcon,
   },
   {
     id: '2',
     title: 'Build Your Streak',
     description: 'Stay motivated by maintaining your workout streak. The longer your streak, the more rewards you earn!',
-    image: require('../assets/images/placeholder2.png'),
+    component: LiftingIcon,
   },
   {
     id: '3',
     title: 'Compete With Friends',
     description: 'Create groups, invite friends, and compete to see who can maintain the longest workout streak.',
-    image: require('../assets/images/placeholder3.png'),
+    component: BoxingIcon,
   },
-  {
-    id: '4',
-    title: 'Upgrade Your Experience',
-    description: 'Unlock premium features based on your performance. The better you do, the more you get!',
-    image: require('../assets/images/placeholder4.png'),
-  },
+  // {
+  //   id: '4',
+  //   title: 'Upgrade Your Experience',
+  //   description: 'Unlock premium features based on your performance. The better you do, the more you get!',
+  //   image: require('../assets/images/placeholder4.png'),
+  // },
 ];
 
 export default function LandingPage() {
@@ -71,13 +72,16 @@ export default function LandingPage() {
   };
 
   const renderItem = ({ item }: { item: OnboardingItem }) => {
+    const IconComponent = item.component;
     return (
       <View style={styles.slide}>
-        <Image 
-          source={item.image} 
-          style={styles.image}
-          resizeMode="contain"
-        />
+        <View style={styles.imageContainer}>
+          <IconComponent 
+            width={width * 0.8} 
+            height={height * 0.4}
+            color={colors.text.primary}
+          />
+        </View>
         <View style={styles.textContainer}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.description}>{item.description}</Text>
@@ -190,10 +194,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
-  image: {
+  imageContainer: {
     width: width * 0.8,
     height: height * 0.4,
     marginBottom: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textContainer: {
     alignItems: 'center',

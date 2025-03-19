@@ -80,7 +80,7 @@ export default function TabNavigator() {
                 onPress={() => setShowLogWorkoutModal(true)}
               >
                 <View style={styles.plusButtonContainer}>
-                  <Feather name="plus" size={24} color={colors.text.inverse} />
+                  <Feather name="plus" size={24} color={colors.text.primary} />
                 </View>
               </TouchableOpacity>
             ),
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     backgroundColor: colors.background.paper,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral.grey200,
+    borderTopColor: colors.neutral.grey800,
     elevation: 0,
     shadowOpacity: 0,
   },
