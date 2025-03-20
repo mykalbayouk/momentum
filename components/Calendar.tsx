@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, ViewStyle } from 'react-native';
 import { Calendar as RNCalendar } from 'react-native-calendars';
 import { colors } from '../theme/colors';
+import { getLocalDate } from '../utils/dateUtils';
 
 interface CalendarProps {
   markedDates: {
@@ -31,11 +32,15 @@ export default function Calendar({
   onMonthChange,
   style,
 }: CalendarProps) {
+  const today = getLocalDate();
+  const startOfYear = getLocalDate(new Date(today.getFullYear(), 0, 1));
+  const endOfYear = getLocalDate(new Date(today.getFullYear(), 11, 31));
+
   return (
     <RNCalendar
-      initialDate={new Date().toISOString()}
-      minDate={new Date(new Date().getFullYear(), 0, 1).toISOString()}
-      maxDate={new Date(new Date().getFullYear(), 11, 31).toISOString()}
+      initialDate={today.toISOString()}
+      minDate={startOfYear.toISOString()}
+      maxDate={endOfYear.toISOString()}
       onDayPress={onDayPress}
       onDayLongPress={onDayLongPress}
       monthFormat={'MMMM yyyy'}

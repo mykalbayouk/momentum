@@ -21,6 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../../navigation/types';
 import { Session } from '@supabase/supabase-js';
 import ImageUpload from '../../components/ImageUpload';
+import { getLocalDate } from '../../utils/dateUtils';
 
 interface Profile {
   id: string;
@@ -307,14 +308,14 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Member Since</Text>
               <Text style={styles.value}>
-                {new Date(profile.created_at).toLocaleDateString()}
+                {getLocalDate(new Date(profile.created_at)).toLocaleDateString()}
               </Text>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Last Updated</Text>
               <Text style={styles.value}>
-                {new Date(profile.updated_at).toLocaleDateString()}
+                {getLocalDate(new Date(profile.updated_at)).toLocaleDateString()}
               </Text>
             </View>
 

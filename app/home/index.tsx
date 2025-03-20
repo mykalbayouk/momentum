@@ -17,6 +17,7 @@ import WorkoutModal from '../../components/WorkoutModal';
 import { colors } from '../../theme/colors';
 import { supabase } from '../../utils/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { getStartOfToday, getLocalDate } from '../../utils/dateUtils';
 
 
 type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
@@ -138,63 +139,32 @@ export default function HomeScreen() {
         
         // Create marked dates for calendar
         const marked: { [date: string]: any } = {};
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = getStartOfToday();
         const todayStr = today.toISOString().split('T')[0];
         
         // First, collect all workout dates
         const workoutDates = data.map(workout => {
+          // The completed_at is in UTC, so we need to convert it to local time
           const date = new Date(workout.completed_at);
-          date.setHours(0, 0, 0, 0);
-          return date.toISOString().split('T')[0];
+          // Get the local date string in YYYY-MM-DD format
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
         }).sort();
 
-        // Find streaks
-        let streakStart = null;
-        let i = 0;
-        
-        while (i < workoutDates.length) {
-          const currentDate = new Date(workoutDates[i]);
-          
-          if (!streakStart) {
-            streakStart = workoutDates[i];
-          }
-          
-          // Check if this is the last date or if next date breaks the streak
-          const isLastDate = i === workoutDates.length - 1;
-          const nextDate = !isLastDate ? new Date(workoutDates[i + 1]) : null;
-          const isStreakBroken = nextDate && 
-            (nextDate.getTime() - currentDate.getTime()) !== (24 * 60 * 60 * 1000);
-          
-          if (isLastDate || isStreakBroken) {
-            // End of a streak (or single date)
-            const streakEnd = workoutDates[i];
-            const isStreak = streakStart !== streakEnd;
-            
-            // Mark all dates in the streak
-            let markDate = new Date(streakStart);
-            const endDate = new Date(streakEnd);
-            
-            while (markDate <= endDate) {
-              const dateStr = markDate.toISOString().split('T')[0];
-              marked[dateStr] = {
-                startingDay: dateStr === streakStart,
-                endingDay: dateStr === streakEnd,
-                color: colors.semantic.success.main,
-                textColor: colors.text.inverse
-              };
-              markDate.setDate(markDate.getDate() + 1);
-            }
-            
-            streakStart = null;
-          }
-          
-          i++;
-        }
+        // Mark each workout date individually
+        workoutDates.forEach(dateStr => {
+          marked[dateStr] = {
+            startingDay: true,
+            endingDay: true,
+            color: colors.semantic.success.main,
+            textColor: colors.text.inverse
+          };
+        });
 
-        // Handle today's date
+        // Handle today's date if no workout
         if (!marked[todayStr]) {
-          // Today without workout
           marked[todayStr] = {
             startingDay: true,
             endingDay: true,
@@ -214,10 +184,15 @@ export default function HomeScreen() {
     if (!session?.user?.id) return;
 
     // Find workouts for the selected date and current user
-    const dayWorkouts = workoutLogs.filter(
-      workout => 
-        workout.completed_at.split('T')[0] === date.dateString
-    );
+    const dayWorkouts = workoutLogs.filter(workout => {
+      // Parse the UTC date and convert to local time
+      const workoutDate = new Date(workout.completed_at);
+      // Adjust for timezone offset
+      const localWorkoutDate = new Date(workoutDate.getTime() - (workoutDate.getTimezoneOffset() * 60000));
+      localWorkoutDate.setHours(0, 0, 0, 0);
+      
+      return localWorkoutDate.toISOString().split('T')[0] === date.dateString;
+    });
     
     if (dayWorkouts.length > 0) {
       setSelectedDate(date);

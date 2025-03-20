@@ -20,6 +20,7 @@ import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { getLocalDateISO, getStartOfToday, getEndOfToday, getYesterday } from '../utils/dateUtils';
 
 type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
 
@@ -159,18 +160,21 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
         if (updateError) throw updateError;
       } else {
         // Check for yesterday's workout to determine streak
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        yesterday.setHours(0, 0, 0, 0);
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
+        const yesterday = getYesterday();
+        const todayEndForYesterday = getEndOfToday();
 
+        console.log('Checking for yesterday\'s workout:', {
+          yesterday: yesterday.toISOString(),
+          todayEndForYesterday: todayEndForYesterday.toISOString()
+        });
+
+        // Query for any workouts between start of yesterday and end of today
         const { data: yesterdayWorkout, error: yesterdayError } = await supabase
           .from('workout_logs')
           .select('completed_at')
           .eq('user_id', session.user.id)
           .gte('completed_at', yesterday.toISOString())
-          .lt('completed_at', today.toISOString())
+          .lte('completed_at', todayEndForYesterday.toISOString())
           .order('completed_at', { ascending: false })
           .limit(1)
           .maybeSingle();

@@ -9,6 +9,10 @@ import LeaderboardScreen from '../app/leaderboard';
 import ProfileScreen from '../app/profile';
 import CreateGroupScreen from '../app/create-group';
 import WorkoutModal from '../components/WorkoutModal';
+import { getStartOfToday, getEndOfToday } from '../utils/dateUtils';
+import { supabase } from '../utils/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import Toast from '../components/Toast';
 
 const Tab = createBottomTabNavigator();
 
@@ -39,7 +43,42 @@ function GroupsScreenWrapper() {
 }
 
 export default function TabNavigator() {
+  const { session } = useAuth();
   const [showLogWorkoutModal, setShowLogWorkoutModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleWorkoutPress = async () => {
+    if (!session?.user?.id) {
+      setError('You must be logged in to log a workout');
+      return;
+    }
+
+    try {
+      // Check if there's already a workout for today
+      const todayStart = getStartOfToday();
+      const todayEnd = getEndOfToday();
+
+      const { data: todayWorkout, error: todayError } = await supabase
+        .from('workout_logs')
+        .select('completed_at')
+        .eq('user_id', session.user.id)
+        .gte('completed_at', todayStart.toISOString())
+        .lte('completed_at', todayEnd.toISOString())
+        .maybeSingle();
+
+      if (todayError) throw todayError;
+
+      if (todayWorkout) {
+        setError('You have already logged a workout for today');
+        return;
+      }
+
+      setShowLogWorkoutModal(true);
+    } catch (error) {
+      console.error('Error checking today\'s workout:', error);
+      setError('Failed to check today\'s workout');
+    }
+  };
 
   return (
     <>
@@ -77,7 +116,7 @@ export default function TabNavigator() {
             tabBarIcon: ({ color, size }) => (
               <TouchableOpacity 
                 style={styles.plusButton}
-                onPress={() => setShowLogWorkoutModal(true)}
+                onPress={handleWorkoutPress}
               >
                 <View style={styles.plusButtonContainer}>
                   <Feather name="plus" size={24} color={colors.text.primary} />
@@ -109,9 +148,13 @@ export default function TabNavigator() {
 
       <WorkoutModal
         visible={showLogWorkoutModal}
-        onClose={() => setShowLogWorkoutModal(false)}
+        onClose={() => {
+          setShowLogWorkoutModal(false);
+          setError(null);
+        }}
         onUpdate={() => setShowLogWorkoutModal(false)}
       />
+      {error && <Toast message={error} onHide={() => setError(null)} />}
     </>
   );
 }
