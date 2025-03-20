@@ -183,18 +183,31 @@ export default function HomeScreen() {
   const handleDayPress = (date: { dateString: string }) => {
     if (!session?.user?.id) return;
 
+    // Get today's date at midnight for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Convert clicked date to Date object and set to midnight
+    const clickedDate = new Date(date.dateString);
+    clickedDate.setHours(0, 0, 0, 0);
+
+    // Don't allow future dates
+    if (clickedDate > today) {
+      return;
+    }
+
     // Find workouts for the selected date and current user
     const dayWorkouts = workoutLogs.filter(workout => {
-      // Parse the UTC date and convert to local time
       const workoutDate = new Date(workout.completed_at);
-      // Adjust for timezone offset
+      // Convert to local time
       const localWorkoutDate = new Date(workoutDate.getTime() - (workoutDate.getTimezoneOffset() * 60000));
-      localWorkoutDate.setHours(0, 0, 0, 0);
-      
+      // Compare date strings in YYYY-MM-DD format
       return localWorkoutDate.toISOString().split('T')[0] === date.dateString;
     });
-    
-    if (dayWorkouts.length > 0) {
+
+    // Allow viewing past workouts or logging for today
+    if (dayWorkouts.length > 0 || date.dateString === todayStr) {
       setSelectedDate(date);
       setShowWorkoutModal(true);
     }

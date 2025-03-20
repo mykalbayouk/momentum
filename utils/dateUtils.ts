@@ -21,9 +21,11 @@ export const getLocalDateISO = (): string => {
  * @returns Date object representing start of today
  */
 export const getStartOfToday = (): Date => {
-  const today = getLocalDate();
-  today.setHours(0, 0, 0, 0);
-  return today;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const date = now.getDate();
+  return new Date(year, month, date, 0, 0, 0, 0);
 };
 
 /**
@@ -31,9 +33,11 @@ export const getStartOfToday = (): Date => {
  * @returns Date object representing end of today
  */
 export const getEndOfToday = (): Date => {
-  const today = getLocalDate();
-  today.setHours(23, 59, 59, 999);
-  return today;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const date = now.getDate();
+  return new Date(year, month, date, 23, 59, 59, 999);
 };
 
 /**
