@@ -34,7 +34,6 @@ interface Profile {
   longest_streak: number;
   streak_count: number;
   weekly_goal: number;
-  weekly_progress: number;
 }
 
 
@@ -46,6 +45,10 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [weeklyGoal, setWeeklyGoal] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,6 +82,8 @@ export default function ProfileScreen() {
           const newProfile = payload.new as Profile;
           setProfile(newProfile);
           setUsername(newProfile.username || '');
+          setEmail(newProfile.email || '');
+          setWeeklyGoal(newProfile.weekly_goal?.toString() || '');
         }
       )
       .subscribe();
@@ -107,6 +112,8 @@ export default function ProfileScreen() {
       if (data) {
         setProfile(data);
         setUsername(data.username || '');
+        setEmail(data.email || '');
+        setWeeklyGoal(data.weekly_goal?.toString() || '');
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -117,21 +124,122 @@ export default function ProfileScreen() {
     }
   }
 
+  // Add function to check if email exists
+  async function checkEmailExists(email: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .neq('id', session?.user?.id || '')
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
+        console.error('Error checking email:', error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return false;
+    }
+  }
+
+  // Add function to check if username exists
+  async function checkUsernameExists(username: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .neq('id', session?.user?.id || '')
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
+        console.error('Error checking username:', error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error checking username:', error);
+      return false;
+    }
+  }
+
+  // Add username change handler
+  const handleUsernameChange = async (newUsername: string) => {
+    setUsername(newUsername);
+    setUsernameError(null);
+    
+    if (newUsername !== profile?.username) {
+      const exists = await checkUsernameExists(newUsername);
+      if (exists) {
+        setUsernameError('This username is already taken');
+      }
+    }
+  };
+
+  // Update the email change handler
+  const handleEmailChange = async (newEmail: string) => {
+    setEmail(newEmail);
+    setEmailError(null);
+    
+    if (newEmail !== profile?.email) {
+      const exists = await checkEmailExists(newEmail);
+      if (exists) {
+        setEmailError('This email is already in use');
+      }
+    }
+  };
+
   async function updateProfile() {
     try {
       if (!session?.user) throw new Error('No user on the session!');
+      
+      // Check if username exists before updating
+      if (username !== profile?.username) {
+        const exists = await checkUsernameExists(username);
+        if (exists) {
+          setUsernameError('This username is already taken');
+          return;
+        }
+      }
 
+      // Check if email exists before updating
+      if (email !== profile?.email) {
+        const exists = await checkEmailExists(email);
+        if (exists) {
+          setEmailError('This email is already in use');
+          return;
+        }
+      }
+
+      // Update email in auth
+      const { error: emailError } = await supabase.auth.updateUser({
+        email: email,
+      });
+
+      if (emailError) throw emailError;
+
+      // Update profile data
       const { error } = await supabase
         .from('profiles')
         .update({
           username,
+          email,
+          weekly_goal: parseInt(weeklyGoal),
           updated_at: new Date().toISOString()
         })
         .eq('id', session.user.id);
 
       if (error) throw error;
 
+      Alert.alert('Success', 'Profile updated successfully');
       setIsEditing(false);
+      setEmailError(null);
+      setUsernameError(null);
     } catch (error) {
       if (error instanceof Error) {
         Alert.alert('Error', error.message);
@@ -274,12 +382,20 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Username</Text>
               {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={username}
-                  onChangeText={setUsername}
-                  placeholder="Enter username"
-                />
+                <View>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      usernameError ? styles.inputError : null
+                    ]}
+                    value={username}
+                    onChangeText={handleUsernameChange}
+                    placeholder="Enter username"
+                  />
+                  {usernameError && (
+                    <Text style={styles.errorText}>{usernameError}</Text>
+                  )}
+                </View>
               ) : (
                 <Text style={styles.value}>{profile.username}</Text>
               )}
@@ -287,7 +403,42 @@ export default function ProfileScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{profile.email}</Text>
+              {isEditing ? (
+                <View>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      emailError ? styles.inputError : null
+                    ]}
+                    value={email}
+                    onChangeText={handleEmailChange}
+                    placeholder="Enter email"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  {emailError && (
+                    <Text style={styles.errorText}>{emailError}</Text>
+                  )}
+                </View>
+              ) : (
+                <Text style={styles.value}>{profile.email}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Weekly Goal (days)</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.input}
+                  value={weeklyGoal}
+                  onChangeText={setWeeklyGoal}
+                  placeholder="Enter weekly goal"
+                  keyboardType="numeric"
+                  maxLength={1}
+                />
+              ) : (
+                <Text style={styles.value}>{profile.weekly_goal} days</Text>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -299,11 +450,6 @@ export default function ProfileScreen() {
               <Text style={styles.label}>Longest Streak</Text>
               <Text style={styles.value}>{profile.longest_streak} days</Text>
             </View>            
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Weekly Goal Progress</Text>
-              <Text style={styles.value}>{Math.round((profile.weekly_progress || 0) * 100)}%</Text>
-            </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Member Since</Text>
@@ -566,5 +712,14 @@ const styles = StyleSheet.create({
     fontSize: 48,
     color: colors.text.inverse,
     fontWeight: 'bold',
+  },
+  inputError: {
+    borderColor: colors.error?.main || '#ff0000',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: colors.error?.main || '#ff0000',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

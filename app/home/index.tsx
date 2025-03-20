@@ -226,12 +226,6 @@ export default function HomeScreen() {
           <Calendar
             markedDates={markedDates}
             onDayPress={handleDayPress}
-            onDayLongPress={(day) => {
-              console.log('Long pressed day:', day);
-            }}
-            onMonthChange={(month) => {
-              console.log('Month changed:', month);
-            }}
           />
         </View>
       </ScrollView>

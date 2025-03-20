@@ -87,6 +87,11 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
       return;
     }
 
+    if (name.trim().length > 10) {
+      Alert.alert('Error', 'Group name must be 10 characters or less');
+      return;
+    }
+
     setLoading(true);
     try {
       let image_url = null;
@@ -132,7 +137,7 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
 
   const handleImagePick = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -165,7 +170,11 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
               onChangeText={setName}
               placeholder="Enter group name"
               placeholderTextColor={colors.text.secondary}
+              maxLength={10}
             />
+            <Text style={styles.helperText}>
+              Title can only be 10 characters ({10 - name.length} remaining)
+            </Text>
 
             <Text style={styles.label}>Description</Text>
             <TextInput
@@ -247,5 +256,10 @@ const styles = StyleSheet.create({
   },
   createButton: {
     marginTop: 24,
+  },
+  helperText: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginTop: 4,
   },
 }); 

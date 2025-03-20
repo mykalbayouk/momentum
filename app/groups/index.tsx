@@ -10,6 +10,7 @@ import {
   Modal,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
@@ -18,6 +19,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import CreateGroupScreen from '../create-group/index';
 import { supabase } from '../../utils/supabase';
 import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import GroupCodeInput from '../../components/GroupCodeInput';
 
 interface Profile {
   id: string;
@@ -33,6 +35,7 @@ interface Group {
   description: string;
   image_url: string | null;
   created_at: string;
+  code: string;
 }
 
 interface GroupMember {
@@ -87,7 +90,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
       </View>
 
       <Card variant="elevated" style={styles.groupDetailsCard}>
-        <View style={styles.groupImageContainer}>
+        <View style={styles.currentGroupImageContainer}>
           {group.image_url ? (
             <Image 
               source={{ uri: group.image_url }} 
@@ -102,6 +105,10 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
           )}
         </View>
         <Text style={styles.groupDescription}>{group.description}</Text>
+        <View style={styles.codeContainer}>
+          <Text style={styles.codeLabel}>Group Code:</Text>
+          <Text style={styles.codeText}>{group.code}</Text>
+        </View>
       </Card>
 
       <Text style={styles.sectionTitle}>Members</Text>
@@ -137,7 +144,6 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
 
 export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPress?: () => void }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [groupCode, setGroupCode] = useState('');
   const [groups, setGroups] = useState<Group[]>([]);
   const [currentGroup, setCurrentGroup] = useState<CurrentGroup | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -189,6 +195,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                 description,
                 image_url,
                 created_at,
+                code,
                 members:profiles!profiles_group_id_fkey(
                   id,
                   username,
@@ -235,6 +242,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                 description,
                 image_url,
                 created_at,
+                code,
                 members:profiles!profiles_group_id_fkey(
                   id,
                   username,
@@ -273,6 +281,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
         description,
         image_url,
         created_at,
+        code,
         profiles!profiles_group_id_fkey(count)
       `)
       .order('created_at', { ascending: false });
@@ -305,6 +314,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
             description,
             image_url,
             created_at,
+            code,
             members:profiles!profiles_group_id_fkey(
               id,
               username,
@@ -332,11 +342,6 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
     // Search will be handled in the next update
   };
 
-  const handleJoinWithCode = () => {
-    // Join with code will be handled in the next update
-    console.log('Attempting to join with code:', groupCode);
-  };
-
   const handleJoinGroup = async (group: Group) => {
     try {
       // Fetch full group details including members
@@ -348,6 +353,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
           description,
           image_url,
           created_at,
+          code,
           members:profiles!profiles_group_id_fkey(
             id,
             username,
@@ -418,8 +424,8 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
             )}
           </View>
           <View style={styles.groupInfo}>
-            <Text style={styles.groupTitle}>{item.name}</Text>
-            <Text style={styles.groupDescription}>{item.description}</Text>
+            <Text style={styles.groupTitle} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.groupDescription} numberOfLines={2}>{item.description}</Text>
           </View>
         </View>
       </Card>
@@ -476,20 +482,12 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
 
         <Card variant="elevated" style={styles.codeCard}>
           <Text style={styles.sectionTitle}>Have a Group Code?</Text>
-          <View style={styles.codeInputContainer}>
-            <TextInput
-              style={styles.codeInput}
-              placeholder="Enter group code"
-              value={groupCode}
-              onChangeText={setGroupCode}
-              placeholderTextColor={colors.text.secondary}
-            />
-            <Button
-              title="Join"
-              onPress={handleJoinWithCode}
-              style={styles.joinButton}
-            />
-          </View>
+          <GroupCodeInput
+            userId={userId || ''}
+            onJoinSuccess={() => {
+              setSelectedGroup(null);
+            }}
+          />
         </Card>
 
         <Text style={styles.sectionTitle}>Available Groups</Text>
@@ -640,13 +638,17 @@ const styles = StyleSheet.create({
   },
   groupContent: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
+    alignItems: 'center',
   },
   groupImageContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
     overflow: 'hidden',
+    backgroundColor: colors.neutral.grey200,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   groupImage: {
     width: '100%',
@@ -666,17 +668,17 @@ const styles = StyleSheet.create({
   },
   groupInfo: {
     flex: 1,
+    gap: 4,
   },
   groupTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 4,
   },
   groupDescription: {
     fontSize: 14,
     color: colors.text.secondary,
-    marginBottom: 8,
+    lineHeight: 20,
   },
   modalContainer: {
     flex: 1,
@@ -724,8 +726,20 @@ const styles = StyleSheet.create({
   },
   // New styles for current group view
   groupDetailsCard: {
-    padding: 16,
+    padding: 24,
     marginBottom: 24,
+    alignItems: 'center',
+    width: '100%',
+  },
+  currentGroupImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    marginBottom: 16,
+    alignSelf: 'center',
+    backgroundColor: colors.neutral.grey200,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   currentGroupImage: {
@@ -804,5 +818,28 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
     fontSize: 14,
     fontWeight: '600',
+  },
+  codeContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: colors.primary.light,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary.main,
+  },
+  codeLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary.dark,
+    marginRight: 8,
+  },
+  codeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary.main,
+    letterSpacing: 3,
   },
 }); 

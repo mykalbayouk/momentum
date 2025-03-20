@@ -14,11 +14,11 @@ import { supabase } from '../../utils/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import Toast from '../../components/Toast';
 import ImageUpload from '../../components/ImageUpload';
+import GroupCodeInput from '../../components/GroupCodeInput';
 
 export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const { session } = useAuth();
   const [activeDays, setActiveDays] = useState('5');
-  const [groupCode, setGroupCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,21 +67,6 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
 
       if (updateError) throw updateError;
 
-      // Join group if code provided
-      if (groupCode.trim()) {
-        const { error: groupError } = await supabase
-          .from('group_members')
-          .insert({
-            user_id: session.user.id,
-            group_code: groupCode.trim(),
-          });
-
-        if (groupError) {
-          console.error('Error joining group:', groupError);
-          // Don't throw error here, just log it
-        }
-      }
-
       // Navigate to main app
       navigation.replace('MainApp');
     } catch (error) {
@@ -119,18 +104,15 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
             style={styles.input}
             value={activeDays}
             onChangeText={setActiveDays}
-            placeholder="How many days per week do you want to work out?"
+            placeholder="How many days per week do you want to work out?(between 1 and 7)"
             placeholderTextColor={colors.text.secondary}
             keyboardType="numeric"
           />
 
           <Text style={styles.label}>Join a Group (Optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={groupCode}
-            onChangeText={setGroupCode}
-            placeholder="Enter group code if you have one"
-            placeholderTextColor={colors.text.secondary}
+          <GroupCodeInput
+            userId={session?.user?.id || ''}
+            onJoinSuccess={() => {}}
           />
 
           <Button
