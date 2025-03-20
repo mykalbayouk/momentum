@@ -1,187 +1,133 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   SafeAreaView,
-  Alert
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from '../../navigation/types';
-import Input from '../../components/Input';
-import Button from '../../components/Button';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
+import Button from '../../components/Button';
+import Card from '../../components/Card';
 import { supabase } from '../../utils/supabase';
+import Toast from '../../components/Toast';
+import { RootStackParamList } from '../../navigation/types';
 
-export default function LoginScreen() {
-  const navigation = useNavigation<NavigationProp>();
+type LoginScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
+};
+
+export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
-      setEmailError('Email is required');
-      return false;
-    } else if (!emailRegex.test(email)) {
-      setEmailError('Please enter a valid email');
-      return false;
-    }
-    setEmailError('');
-    return true;
-  };
-
-  const validatePassword = (password: string) => {
-    if (!password) {
-      setPasswordError('Password is required');
-      return false;
-    } else if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
-      return false;
-    }
-    setPasswordError('');
-    return true;
-  };
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-
-    if (isEmailValid && isPasswordValid) {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          Alert.alert('Login Error', error.message);
-          setIsLoading(false);
-          return;
-        }
-
-        if (data?.user) {
-          console.log('Login successful:', data.user.email);
-          navigation.navigate('MainApp');
-        }
-      } catch (error) {
-        console.error('Login error:', error);
-        Alert.alert('Error', 'An unexpected error occurred during login');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email address first');
+    if (!email || !password) {
+      setError('Please fill in all fields');
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'momentum://reset-password',
+      const { data: { session }, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (error) {
-        Alert.alert('Error', error.message);
-        return;
+      if (signInError) throw signInError;
+
+      if (!session?.user) {
+        throw new Error('No session after login');
       }
 
-      Alert.alert(
-        'Password Reset',
-        'Check your email for the password reset link'
-      );
+      // Check if user has completed onboarding
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('has_completed_onboarding')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Navigate based on onboarding status
+      if (!profile.has_completed_onboarding) {
+        navigation.replace('Onboarding');
+      } else {
+        navigation.replace('MainApp');
+      }
     } catch (error) {
-      console.error('Password reset error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      console.error('Login error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to log in');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
+        style={styles.keyboardAvoid}
       >
         <ScrollView 
-          contentContainerStyle={styles.scrollView}
-          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => {
-                console.log('Back button pressed');
-                navigation.goBack();
-              }}
-            >
-              <Text style={styles.backButtonText}>←</Text>
-            </TouchableOpacity>
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
+            <Text style={styles.subtitle}>Log in to continue</Text>
           </View>
 
-          <View style={styles.form}>
-            <Input
-              label="Email"
-              placeholder="Enter your email"
+          <Card variant="elevated" style={styles.card}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
               value={email}
-              onChangeText={(text) => {                
-                setEmail(text);
-              }}
+              onChangeText={setEmail}
+              placeholder="Enter your email"
+              placeholderTextColor={colors.text.secondary}
               keyboardType="email-address"
               autoCapitalize="none"
-              error={emailError}
-              onBlur={() => validateEmail(email)}
             />
 
-            <Input
-              label="Password"
-              placeholder="Enter your password"
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
               value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-              }}
+              onChangeText={setPassword}
+              placeholder="Enter your password"
+              placeholderTextColor={colors.text.secondary}
               secureTextEntry
-              error={passwordError}
-              onBlur={() => validatePassword(password)}
+            />
+
+            <Button
+              title={isLoading ? "Logging in..." : "Log In"}
+              onPress={handleLogin}
+              style={styles.submitButton}
+              disabled={isLoading}
             />
 
             <TouchableOpacity 
-              style={styles.forgotPassword}
-              onPress={handleForgotPassword}
+              style={styles.signupLink}
+              onPress={() => navigation.navigate('Signup')}
             >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={styles.signupText}>
+                Don't have an account? <Text style={styles.signupTextBold}>Sign up</Text>
+              </Text>
             </TouchableOpacity>
-
-            <Button
-              title="Login"
-              onPress={handleLogin}
-              loading={isLoading}
-              style={styles.loginButton}
-            />
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => {
-              navigation.navigate('Signup');
-            }}>
-              <Text style={styles.signupText}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+          </Card>
         </ScrollView>
       </KeyboardAvoidingView>
+      {error && <Toast message={error} onHide={() => setError(null)} />}
     </SafeAreaView>
   );
 }
@@ -191,62 +137,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.default,
   },
-  keyboardAvoidingView: {
+  keyboardAvoid: {
     flex: 1,
   },
-  scrollView: {
+  scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    padding: 16,
   },
   header: {
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  backButton: {
-    marginBottom: 20,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: '#333',
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: colors.text.primary,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     color: colors.text.secondary,
-    lineHeight: 24,
   },
-  form: {
-    marginBottom: 30,
+  card: {
+    padding: 16,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 8,
   },
-  forgotPasswordText: {
-    color: colors.primary.main,
-    fontSize: 14,
+  input: {
+    borderWidth: 1,
+    borderColor: colors.neutral.grey300,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: colors.text.primary,
+    marginBottom: 16,
   },
-  loginButton: {
-    marginTop: 10,
+  submitButton: {
+    marginTop: 8,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 'auto',
-    marginBottom: 20,
-  },
-  footerText: {
-    color: '#666',
-    fontSize: 14,
+  signupLink: {
+    marginTop: 16,
+    alignItems: 'center',
   },
   signupText: {
     color: colors.text.secondary,
     fontSize: 14,
+  },
+  signupTextBold: {
+    color: colors.primary.main,
     fontWeight: '600',
   },
 }); 

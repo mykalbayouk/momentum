@@ -1,13 +1,18 @@
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { NavigatorScreenParams } from '@react-navigation/native';
 
 export type RootStackParamList = {
-  Landing: undefined;
   Login: undefined;
   Signup: undefined;
+  Onboarding: undefined;
   MainApp: undefined;
+};
+
+export type MainTabParamList = {
+  Home: undefined;
+  Groups: undefined;
   Workout: undefined;
-  CreateGroup: undefined;
-  JoinGroup: undefined;
+  Leaderboard: undefined;
+  Profile: undefined;
 };
 
 export type NavigationProp = {

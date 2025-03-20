@@ -54,4 +54,32 @@ export const getTomorrow = (): Date => {
   const tomorrow = getLocalDate();
   tomorrow.setDate(tomorrow.getDate() + 1);
   return tomorrow;
+};
+
+/**
+ * Gets the start of the current week (Sunday)
+ * @returns Date object representing start of current week
+ */
+export const getStartOfWeek = (): Date => {
+  const today = getLocalDate();
+  const day = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const diff = today.getDate() - day; // Go back to Sunday
+  const sunday = new Date(today);
+  sunday.setDate(diff);
+  sunday.setHours(0, 0, 0, 0);
+  return sunday;
+};
+
+/**
+ * Gets the end of the current week (Saturday)
+ * @returns Date object representing end of current week
+ */
+export const getEndOfWeek = (): Date => {
+  const today = getLocalDate();
+  const day = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const diff = today.getDate() - day + 6; // Go forward to Saturday
+  const saturday = new Date(today);
+  saturday.setDate(diff);
+  saturday.setHours(23, 59, 59, 999);
+  return saturday;
 }; 

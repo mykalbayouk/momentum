@@ -215,7 +215,7 @@ export default function ProfileScreen() {
       // Reset the navigation stack and navigate to Landing
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Landing' }],
+        routes: [{ name: 'Login' }],
       });
     } catch (error) {
       if (error instanceof Error) {

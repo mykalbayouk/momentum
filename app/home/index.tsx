@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import Card from '../../components/Card';
 import Badge from '../../components/Badge';
-import ProgressBar from '../../components/ProgressBar';
 import Calendar from '../../components/Calendar';
 import WorkoutModal from '../../components/WorkoutModal';
+import WeeklyProgress from '../../components/WeeklyProgress';
 import { colors } from '../../theme/colors';
 import { supabase } from '../../utils/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { getStartOfToday, getLocalDate } from '../../utils/dateUtils';
+import { getStartOfToday } from '../../utils/dateUtils';
 
 
 type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
@@ -218,22 +218,9 @@ export default function HomeScreen() {
           </Card>
         </View>
 
-        <Card
-          title="Weekly Progress"
-          variant="elevated"
-          style={styles.progressCard}
-          content={
-            <View style={styles.progressContent}>
-              <ProgressBar 
-                progress={profile?.weekly_progress || 0} 
-                height={8}
-              />
-              <Text style={styles.progressText}>
-                You're {Math.round((profile?.weekly_progress || 0) * 100)}% of the way to your weekly goal!
-              </Text>
-            </View>
-          }
-        />
+        {profile?.weekly_goal && (
+          <WeeklyProgress weeklyGoal={profile.weekly_goal} />
+        )}
 
         <View style={styles.calendarContainer}>
           <Calendar
@@ -298,17 +285,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.text.primary,
-  },
-  progressCard: {
-    marginBottom: 24,
-  },
-  progressContent: {
-    paddingVertical: 8,
-  },
-  progressText: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: 8,
   },
   calendarContainer: {
     marginBottom: 24,

@@ -1,39 +1,26 @@
-import * as React from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-// Import screens
-import LandingPage from '../app/index';
-import LoginScreen from '../app/login/index';
-import SignupScreen from '../app/signup/index';
+import { RootStackParamList } from './types';
+import LoginScreen from '../app/login';
+import SignupScreen from '../app/signup';
+import OnboardingScreen from '../app/onboarding';
 import TabNavigator from './TabNavigator';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-interface AppNavigatorProps {
-  initialRouteName: string;
-}
-
-export default function AppNavigator({ initialRouteName }: AppNavigatorProps) {
+export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={initialRouteName}
         screenOptions={{
           headerShown: false,
-          animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="Landing" component={LandingPage} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen 
-          name="MainApp" 
-          component={TabNavigator}
-          options={{
-            gestureEnabled: false
-          }}
-        />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="MainApp" component={TabNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );
