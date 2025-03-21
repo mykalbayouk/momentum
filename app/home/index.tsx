@@ -206,8 +206,8 @@ export default function HomeScreen() {
       return localWorkoutDate.toISOString().split('T')[0] === date.dateString;
     });
 
-    // Allow viewing past workouts or logging for today
-    if (dayWorkouts.length > 0 || date.dateString === todayStr) {
+    // Only show modal if there's a workout for that date
+    if (dayWorkouts.length > 0) {
       setSelectedDate(date);
       setShowWorkoutModal(true);
     }
@@ -247,11 +247,14 @@ export default function HomeScreen() {
         visible={showWorkoutModal}
         onClose={() => {
           setShowWorkoutModal(false);
+          setSelectedDate(null);
         }}
         onUpdate={loadWorkoutLogs}
-        workout={workoutLogs.find(w => 
-          w.completed_at.split('T')[0] === selectedDate?.dateString
-        )}
+        workout={workoutLogs.find(w => {
+          const workoutDate = new Date(w.completed_at);
+          const localWorkoutDate = new Date(workoutDate.getTime() - (workoutDate.getTimezoneOffset() * 60000));
+          return localWorkoutDate.toISOString().split('T')[0] === selectedDate?.dateString;
+        })}
       />
     </SafeAreaView>
   );

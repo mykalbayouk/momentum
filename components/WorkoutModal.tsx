@@ -159,24 +159,35 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
 
         if (updateError) throw updateError;
       } else {
+        // Check if there's already a workout for today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+
+        const { data: todayWorkout, error: todayError } = await supabase
+          .from('workout_logs')
+          .select('completed_at')
+          .eq('user_id', session.user.id)
+          .gte('completed_at', today.toISOString())
+          .lte('completed_at', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString())
+          .maybeSingle();
+
+        if (todayError) throw todayError;
+
+        if (todayWorkout) {
+          throw new Error('You have already logged a workout for today');
+        }
+
         // Check for yesterday's workout to determine streak
-        const yesterday = getYesterday();
-        const todayEndForYesterday = getEndOfToday();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
 
-        console.log('Checking for yesterday\'s workout:', {
-          yesterday: yesterday.toISOString(),
-          todayEndForYesterday: todayEndForYesterday.toISOString()
-        });
-
-        // Query for any workouts between start of yesterday and end of today
         const { data: yesterdayWorkout, error: yesterdayError } = await supabase
           .from('workout_logs')
           .select('completed_at')
           .eq('user_id', session.user.id)
           .gte('completed_at', yesterday.toISOString())
-          .lte('completed_at', todayEndForYesterday.toISOString())
-          .order('completed_at', { ascending: false })
-          .limit(1)
+          .lte('completed_at', new Date(yesterday.getTime() + 24 * 60 * 60 * 1000).toISOString())
           .maybeSingle();
 
         if (yesterdayError) throw yesterdayError;
@@ -199,17 +210,7 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
 
         const longestStreak = Math.max(newStreak, profileData.longest_streak);
 
-        const { error: updateStreakError } = await supabase
-          .from('profiles')
-          .update({
-            current_streak: newStreak,
-            longest_streak: longestStreak,
-          })
-          .eq('id', session.user.id);
-
-        if (updateStreakError) throw updateStreakError;
-
-        // Create new workout
+        // Create new workout first
         const { error: insertError } = await supabase
           .from('workout_logs')
           .insert({
@@ -223,6 +224,17 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
           });
 
         if (insertError) throw insertError;
+
+        // Then update the streak
+        const { error: updateStreakError } = await supabase
+          .from('profiles')
+          .update({
+            current_streak: newStreak,
+            longest_streak: longestStreak,
+          })
+          .eq('id', session.user.id);
+
+        if (updateStreakError) throw updateStreakError;
       }
 
       onUpdate();
