@@ -20,8 +20,10 @@ import { supabase } from '../../utils/supabase';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '../../navigation/types';
 import { Session } from '@supabase/supabase-js';
-import ImageUpload from '../../components/ImageUpload';
 import { getLocalDate } from '../../utils/dateUtils';
+import ImageSelector from '../../components/ImageSelector';
+import { uploadImage, deleteImage } from '../../utils/imageUpload';
+import ImageViewer from '../../components/ImageViewer';
 
 interface Profile {
   id: string;
@@ -49,6 +51,8 @@ export default function ProfileScreen() {
   const [weeklyGoal, setWeeklyGoal] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -216,6 +220,23 @@ export default function ProfileScreen() {
         }
       }
 
+      // Upload new image if one was selected
+      let finalImageUrl = profile?.avatar_url;
+      if (selectedImageUri) {
+        const { url } = await uploadImage(selectedImageUri, 'avatars', session.user.id);
+        finalImageUrl = url;
+
+        // Delete old avatar if it exists
+        if (profile?.avatar_url && profile.avatar_url.startsWith('http')) {
+          try {
+            await deleteImage(profile.avatar_url, 'avatars');
+          } catch (error) {
+            console.error('Error deleting old avatar:', error);
+            // Don't throw here - we still want to complete the update
+          }
+        }
+      }
+
       // Update email in auth
       const { error: emailError } = await supabase.auth.updateUser({
         email: email,
@@ -230,6 +251,7 @@ export default function ProfileScreen() {
           username,
           email,
           weekly_goal: parseInt(weeklyGoal),
+          avatar_url: finalImageUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', session.user.id);
@@ -240,6 +262,8 @@ export default function ProfileScreen() {
       setIsEditing(false);
       setEmailError(null);
       setUsernameError(null);
+      setSelectedImageUri(null);
+      setImageUrl('');
     } catch (error) {
       if (error instanceof Error) {
         Alert.alert('Error', error.message);
@@ -247,7 +271,12 @@ export default function ProfileScreen() {
     }
   }
 
-  async function handleAvatarUpload(filePath: string) {
+  const handleImageSelect = (uri: string) => {
+    setSelectedImageUri(uri);
+    setImageUrl(uri);
+  };
+
+  async function handleAvatarUpload() {
     try {
       if (!session?.user) throw new Error('No user on the session!');
       if (!profile) throw new Error('No profile data available!');
@@ -255,16 +284,18 @@ export default function ProfileScreen() {
       // Store the old avatar URL before updating
       const oldAvatarUrl = profile.avatar_url;
 
-      // Get the public URL for the new avatar
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      // Upload new image if one was selected
+      let finalImageUrl = imageUrl;
+      if (selectedImageUri) {
+        const { url } = await uploadImage(selectedImageUri, 'avatars', session.user.id);
+        finalImageUrl = url;
+      }
 
       // Update profile with new avatar URL
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          avatar_url: publicUrl,
+          avatar_url: finalImageUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', session.user.id);
@@ -274,11 +305,7 @@ export default function ProfileScreen() {
       // After successful update, delete the old avatar if it exists
       if (oldAvatarUrl && oldAvatarUrl.startsWith('http')) {
         try {
-          const urlParts = oldAvatarUrl.split('/');
-          const oldFilePath = urlParts[urlParts.length - 1];
-          await supabase.storage
-            .from('avatars')
-            .remove([oldFilePath]);
+          await deleteImage(oldAvatarUrl, 'avatars');
         } catch (error) {
           console.error('Error deleting old avatar:', error);
           // Don't throw here - we still want to complete the update
@@ -367,15 +394,23 @@ export default function ProfileScreen() {
       <ScrollView style={styles.scrollView}>
         <Card variant="elevated" style={styles.profileCard}>
           <View style={styles.imageContainer}>
-            <ImageUpload 
-              url={profile.avatar_url} 
-              size={120} 
-              onUpload={handleAvatarUpload}
-              bucket="avatars"
-              aspect={[1, 1]}
-              placeholder={profile.username?.[0]?.toUpperCase() || '?'}
-              style={styles.avatar}
-            />
+            {isEditing ? (
+              <ImageSelector 
+                url={selectedImageUri || profile.avatar_url} 
+                size={120} 
+                onSelect={handleImageSelect}
+                viewMode="avatar"
+                placeholder={profile.username?.[0]?.toUpperCase() || '?'}
+                style={styles.avatar}
+              />
+            ) : (
+              <ImageViewer 
+                url={profile.avatar_url} 
+                size={120} 
+                placeholder={profile.username?.[0]?.toUpperCase() || '?'}
+                style={styles.avatar}
+              />
+            )}
           </View>
 
           <View style={styles.formContainer}>
@@ -555,15 +590,18 @@ const styles = StyleSheet.create({
   imageContainer: {
     alignItems: 'center',
     marginBottom: 24,
+    height: 120,
+    width: 120,
+    alignSelf: 'center',
   },
   avatarContainer: {
     position: 'relative',
     alignItems: 'center',
   },
   avatar: {
-    borderRadius: 180,
     width: 120,
-    
+    height: 120,
+    borderRadius: 60,
   },
   image: {
     objectFit: 'cover',

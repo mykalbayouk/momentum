@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Image,
   ScrollView,
   SafeAreaView,
   Alert,
@@ -13,9 +12,9 @@ import {
 import { colors } from '../../theme/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
-import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../utils/supabase';
-import { decode } from 'base64-arraybuffer';
+import ImageSelector from '../../components/ImageSelector';
+import { uploadImage } from '../../utils/imageUpload';
 
 interface CreateGroupScreenProps {
   onClose: () => void;
@@ -24,61 +23,13 @@ interface CreateGroupScreenProps {
 export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const uploadImage = async (uri: string): Promise<string | null> => {
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      return new Promise((resolve, reject) => {
-        reader.onload = async () => {
-          try {
-            const base64 = reader.result as string;
-            const base64Data = base64.split(',')[1];
-            const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpeg';
-            const path = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-            // Delete old image if it exists
-            if (imageUri?.startsWith('http')) {
-              try {
-                const urlParts = imageUri.split('/');
-                const oldFilePath = urlParts[urlParts.length - 1];
-                await supabase.storage
-                  .from('group-images')
-                  .remove([oldFilePath]);
-              } catch (error) {
-                console.error('Error deleting old group image:', error);
-              }
-            }
-
-            const { error: uploadError } = await supabase.storage
-              .from('group-images')
-              .upload(path, decode(base64Data), {
-                contentType: `image/${fileExt}`,
-              });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-              .from('group-images')
-              .getPublicUrl(path);
-
-            resolve(publicUrl);
-          } catch (error) {
-            console.error('Error uploading image:', error);
-            reject(error);
-          }
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error('Error preparing image:', error);
-      return null;
-    }
+  const handleImageSelect = (uri: string) => {
+    setSelectedImageUri(uri);
+    setImageUrl(uri);
   };
 
   const handleCreateGroup = async () => {
@@ -94,13 +45,16 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
 
     setLoading(true);
     try {
-      let image_url = null;
-      if (imageUri) {
-        image_url = await uploadImage(imageUri);
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user logged in');
+
+      let finalImageUrl = imageUrl;
+
+      // Handle image upload if an image was selected
+      if (selectedImageUri) {
+        const { url } = await uploadImage(selectedImageUri, 'group-images', user.id);
+        finalImageUrl = url;
+      }
 
       const { data, error } = await supabase
         .from('groups')
@@ -108,7 +62,7 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
           {
             name: name.trim(),
             description: description.trim(),
-            image_url,
+            image_url: finalImageUrl,
             created_by: user.id
           }
         ])
@@ -135,32 +89,20 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
     }
   };
 
-  const handleImagePick = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <Card variant="elevated" style={styles.formCard}>
-          <TouchableOpacity style={styles.imageContainer} onPress={handleImagePick}>
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.groupImage} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imagePlaceholderText}>Add Group Photo</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={styles.imageContainer}>
+            <ImageSelector 
+              url={selectedImageUri || imageUrl}
+              size={120}
+              onSelect={handleImageSelect}
+              viewMode="avatar"
+              placeholder=""
+              style={styles.groupImage}
+            />
+          </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Group Name</Text>
@@ -214,25 +156,14 @@ const styles = StyleSheet.create({
   imageContainer: {
     alignItems: 'center',
     marginBottom: 24,
+    height: 120,
+    width: 120,
+    alignSelf: 'center',
   },
   groupImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-  },
-  imagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.neutral.grey200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholderText: {
-    color: colors.text.secondary,
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 10,
   },
   inputContainer: {
     gap: 16,

@@ -20,6 +20,7 @@ import CreateGroupScreen from '../create-group/index';
 import { supabase } from '../../utils/supabase';
 import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import GroupCodeInput from '../../components/GroupCodeInput';
+import ImageViewer from '../../components/ImageViewer';
 
 interface Profile {
   id: string;
@@ -91,18 +92,11 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
 
       <Card variant="elevated" style={styles.groupDetailsCard}>
         <View style={styles.currentGroupImageContainer}>
-          {group.image_url ? (
-            <Image 
-              source={{ uri: group.image_url }} 
-              style={styles.currentGroupImage} 
-            />
-          ) : (
-            <View style={styles.currentGroupImagePlaceholder}>
-              <Text style={styles.groupImagePlaceholderText}>
-                {group.name[0]}
-              </Text>
-            </View>
-          )}
+          <ImageViewer
+            url={group.image_url}
+            size={120}
+            placeholder={group.name[0]}
+          />
         </View>
         <Text style={styles.groupDescription}>{group.description}</Text>
         <View style={styles.codeContainer}>
@@ -118,17 +112,11 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
           .map(member => (
             <Card key={member.id} variant="elevated" style={styles.memberCard}>
               <View style={styles.memberContent}>
-                <View style={styles.memberImageContainer}>
-                  {member.avatar_url ? (
-                    <Image source={{ uri: member.avatar_url }} style={styles.memberImage} />
-                  ) : (
-                    <View style={styles.memberImagePlaceholder}>
-                      <Text style={styles.memberImagePlaceholderText}>
-                        {member.username[0]}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                <ImageViewer
+                  url={member.avatar_url}
+                  size={48}
+                  placeholder={member.username[0]}
+                />
                 <View style={styles.memberInfo}>
                   <Text style={styles.memberName}>{member.username}</Text>
                   <Text style={styles.streakText}>{member.current_streak} day streak</Text>
@@ -412,17 +400,11 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
         style={styles.groupCard}
       >
         <View style={styles.groupContent}>
-          <View style={styles.groupImageContainer}>
-            {item.image_url ? (
-              <Image source={{ uri: item.image_url }} style={styles.groupImage} />
-            ) : (
-              <View style={styles.groupImagePlaceholder}>
-                <Text style={styles.groupImagePlaceholderText}>
-                  {item.name[0]}
-                </Text>
-              </View>
-            )}
-          </View>
+          <ImageViewer
+            url={item.image_url}
+            size={60}
+            placeholder={item.name[0]}
+          />
           <View style={styles.groupInfo}>
             <Text style={styles.groupTitle} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.groupDescription} numberOfLines={2}>{item.description}</Text>

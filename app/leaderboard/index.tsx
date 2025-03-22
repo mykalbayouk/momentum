@@ -13,6 +13,7 @@ import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
 import { supabase } from '../../utils/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import ImageViewer from '../../components/ImageViewer';
 
 interface User {
   id: string;
@@ -101,17 +102,11 @@ export default function LeaderboardScreen() {
             </Text>
           </View>
           <View style={styles.userInfo}>
-            <View style={styles.userImageContainer}>
-              {user.avatar_url ? (
-                <Image source={{ uri: user.avatar_url }} style={styles.userImage} />
-              ) : (
-                <View style={styles.userImagePlaceholder}>
-                  <Text style={styles.userImagePlaceholderText}>
-                    {user.username[0]}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <ImageViewer
+              url={user.avatar_url}
+              size={48}
+              placeholder={user.username[0]}
+            />
             <Text style={styles.userName}>{user.username}</Text>
           </View>
           <View style={styles.streakContainer}>
@@ -215,28 +210,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  userImageContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  userImage: {
-    width: '100%',
-    height: '100%',
-  },
-  userImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.neutral.grey200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userImagePlaceholderText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text.secondary,
   },
   userName: {
     fontSize: 16,

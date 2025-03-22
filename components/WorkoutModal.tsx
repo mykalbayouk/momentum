@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Image,
   ScrollView,
   Modal,
   TouchableWithoutFeedback,
@@ -15,12 +14,11 @@ import Button from './Button';
 import Card from './Card';
 import Dropdown from './Dropdown';
 import Toast from './Toast';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
+import ImageSelector from './ImageSelector';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { getLocalDateISO, getStartOfToday, getEndOfToday, getYesterday } from '../utils/dateUtils';
+import { uploadImage, deleteImage } from '../utils/imageUpload';
 
 type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
 
@@ -45,7 +43,8 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
   const [duration, setDuration] = useState(workout?.duration.replace(' minutes', '') || '');
   const [intensity, setIntensity] = useState(workout?.intensity || 5);
   const [notes, setNotes] = useState(workout?.notes || '');
-  const [imageUri, setImageUri] = useState<string | null>(workout?.image_url || null);
+  const [imageUrl, setImageUrl] = useState<string | null>(workout?.image_url || null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,51 +68,13 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
       setDuration(workout.duration.replace(' minutes', ''));
       setIntensity(workout.intensity);
       setNotes(workout.notes || '');
-      setImageUri(workout.image_url);
+      setImageUrl(workout.image_url);
     }
   }, [workout]);
 
-  const uploadImage = async (uri: string) => {
-    try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      
-      const filePath = `${session?.user.id}/${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('workout-images')
-        .upload(filePath, decode(base64), {
-          contentType: 'image/jpeg',
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('workout-images')
-        .getPublicUrl(filePath);
-
-      return { url: publicUrl, path: filePath };
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw new Error('Failed to upload image');
-    }
-  };
-
-  const deleteOldImage = async (url: string) => {
-    try {
-      // Extract the file path from the URL
-      const urlParts = url.split('/');
-      const filePath = `${urlParts[urlParts.length - 2]}/${urlParts[urlParts.length - 1]}`;
-      
-      const { error } = await supabase.storage
-        .from('workout-images')
-        .remove([filePath]);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting old image:', error);
-    }
+  const handleImageSelect = (uri: string) => {
+    setSelectedImageUri(uri);
+    setImageUrl(uri);
   };
 
   const handleSubmit = async () => {
@@ -126,23 +87,22 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
     setError(null);
     
     try {
-      let imageUrl = imageUri;
-      let newImagePath = null;
-
-      if (imageUri && !imageUri.startsWith('http')) {
-        // New image being uploaded
-        const uploadResult = await uploadImage(imageUri);
-        imageUrl = uploadResult.url;
-        newImagePath = uploadResult.path;
-
-        // If updating and there was a previous image, delete it
-        if (workout?.image_url) {
-          await deleteOldImage(workout.image_url);
-        }
-      }
-
       const durationMinutes = parseInt(duration) || 0;
       const durationInterval = `${durationMinutes} minutes`;
+
+      let finalImageUrl = imageUrl;
+
+      // Handle image upload if a new image was selected
+      if (selectedImageUri && selectedImageUri !== workout?.image_url) {
+        // Delete old image if it exists
+        if (workout?.image_url && !workout.image_url.startsWith('http')) {
+          await deleteImage(workout.image_url, 'workout-images');
+        }
+
+        // Upload new image
+        const { url } = await uploadImage(selectedImageUri, 'workout-images', session.user.id);
+        finalImageUrl = url;
+      }
 
       if (workout) {
         // Update existing workout
@@ -153,7 +113,7 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
             duration: durationInterval,
             intensity,
             notes,
-            image_url: imageUrl,
+            image_url: finalImageUrl,
           })
           .eq('id', workout.id);
 
@@ -219,7 +179,7 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
             duration: durationInterval,
             intensity,
             notes,
-            image_url: imageUrl,
+            image_url: finalImageUrl,
             completed_at: new Date().toISOString(),
           });
 
@@ -244,24 +204,6 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
       setError(error instanceof Error ? error.message : 'Failed to save workout');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleImagePick = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "images",
-        allowsEditing: false,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled) {
-        setImageUri(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      setError('Failed to pick image');
     }
   };
 
@@ -293,15 +235,16 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
                     style={styles.dropdown}
                   />
 
-                  <TouchableOpacity style={styles.imageContainer} onPress={handleImagePick}>
-                    {imageUri ? (
-                      <Image source={{ uri: imageUri }} style={styles.workoutImage} />
-                    ) : (
-                      <View style={styles.imagePlaceholder}>
-                        <Text style={styles.imagePlaceholderText}>Add Workout Photo</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
+                  <View style={styles.imageContainer}>
+                    <ImageSelector 
+                      url={imageUrl}
+                      size={200}
+                      onSelect={handleImageSelect}
+                      viewMode="display"
+                      placeholder=""
+                      style={styles.workoutImage}
+                    />
+                  </View>
 
                   <TouchableOpacity
                     style={styles.optionalToggle}
@@ -435,18 +378,6 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 4/3,
     borderRadius: 12,
-  },
-  imagePlaceholder: {
-    width: '100%',
-    aspectRatio: 4/3,
-    borderRadius: 12,
-    backgroundColor: colors.neutral.grey200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholderText: {
-    color: colors.text.secondary,
-    fontSize: 14,
   },
   optionalToggle: {
     padding: 10,

@@ -13,40 +13,21 @@ import Card from '../../components/Card';
 import { supabase } from '../../utils/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import Toast from '../../components/Toast';
-import ImageUpload from '../../components/ImageUpload';
+import ImageSelector from '../../components/ImageSelector';
 import GroupCodeInput from '../../components/GroupCodeInput';
+import { uploadImage } from '../../utils/imageUpload';
 
 export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const { session } = useAuth();
   const [activeDays, setActiveDays] = useState('5');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  const handleAvatarUpload = async (filePath: string) => {
-    try {
-      if (!session?.user) throw new Error('No user on the session!');
-
-      // Get the public URL for the new avatar
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', session.user.id);
-
-      if (updateError) throw updateError;
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      throw error;
-    }
+  const handleImageSelect = (uri: string) => {
+    setSelectedImageUri(uri);
+    setImageUrl(uri);
   };
 
   const handleSubmit = async () => {
@@ -56,12 +37,21 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
     setError(null);
 
     try {
+      let finalImageUrl = imageUrl;
+
+      // Handle image upload if an image was selected
+      if (selectedImageUri) {
+        const { url } = await uploadImage(selectedImageUri, 'avatars', session.user.id);
+        finalImageUrl = url;
+      }
+
       // Update profile with onboarding data
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           weekly_goal: parseInt(activeDays),
           has_completed_onboarding: true,
+          avatar_url: finalImageUrl,
         })
         .eq('id', session.user.id);
 
@@ -88,13 +78,12 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
         <Card variant="elevated" style={styles.card}>
           <Text style={styles.label}>Profile Picture</Text>
           <View style={styles.imageContainer}>
-            <ImageUpload 
-              url={null}
+            <ImageSelector 
+              url={imageUrl}
               size={120}
-              onUpload={handleAvatarUpload}
-              bucket="avatars"
-              aspect={[1, 1]}
-              placeholder="?"
+              onSelect={handleImageSelect}
+              viewMode="avatar"
+              placeholder=""
               style={styles.avatar}
             />
           </View>
