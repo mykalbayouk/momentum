@@ -55,16 +55,16 @@ export default function WeeklyProgress({ weeklyGoal }: WeeklyProgressProps) {
       // Get all workouts for the current week
       const { data: workouts, error } = await supabase
         .from('workout_logs')
-        .select('completed_at')
+        .select('completed_at, is_rest_day')
         .eq('user_id', session.user.id)
         .gte('completed_at', startOfWeek.toISOString())
         .lte('completed_at', endOfWeek.toISOString());
 
       if (error) throw error;
 
-      // Calculate unique workout days
+      // Calculate unique non-rest day workout days
       const uniqueWorkoutDays = new Set(
-        workouts?.map(workout => {
+        workouts?.filter(w => !w.is_rest_day).map(workout => {
           const date = new Date(workout.completed_at);
           return date.toISOString().split('T')[0];
         }) || []

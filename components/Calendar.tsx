@@ -11,6 +11,7 @@ interface CalendarProps {
       endingDay?: boolean;
       color?: string;
       textColor?: string;
+      marked?: boolean;
     };
   };
   onDayPress: (date: { dateString: string }) => void;
@@ -45,7 +46,7 @@ export default function Calendar({
       onDayLongPress={onDayLongPress}
       monthFormat={'MMMM yyyy'}
       onMonthChange={onMonthChange}
-      hideExtraDays={true}
+      hideExtraDays={false}
       firstDay={0}
       enableSwipeMonths={false}
       markingType="period"
@@ -65,7 +66,10 @@ export default function Calendar({
         textMonthFontWeight: 'bold',
         textDayHeaderFontSize: 14,
         dayTextColor: colors.text.primary,
-        textSectionTitleColor: colors.text.secondary
+        textSectionTitleColor: colors.text.secondary,
+        dotColor: colors.primary.main,
+        periodColor: colors.primary.main,
+        textDisabledColor: colors.text.disabled
       }}
       style={style}
     />

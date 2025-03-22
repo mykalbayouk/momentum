@@ -17,7 +17,7 @@ import WeeklyProgress from '../../components/WeeklyProgress';
 import { colors } from '../../theme/colors';
 import { supabase } from '../../utils/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { getStartOfToday } from '../../utils/dateUtils';
+import { getStartOfToday, getStartOfWeek, getEndOfWeek } from '../../utils/dateUtils';
 
 
 type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
@@ -30,6 +30,7 @@ interface WorkoutLog {
   intensity: number;
   notes: string;
   image_url: string | null;
+  is_rest_day: boolean;
 }
 
 interface Profile {
@@ -128,7 +129,7 @@ export default function HomeScreen() {
 
       const { data, error } = await supabase
         .from('workout_logs')
-        .select('id, completed_at, workout_type, duration, intensity, notes, image_url')
+        .select('id, completed_at, workout_type, duration, intensity, notes, image_url, is_rest_day')
         .eq('user_id', session.user.id)
         .order('completed_at', { ascending: true });
 
@@ -141,35 +142,107 @@ export default function HomeScreen() {
         const marked: { [date: string]: any } = {};
         const today = getStartOfToday();
         const todayStr = today.toISOString().split('T')[0];
-        
-        // First, collect all workout dates
-        const workoutDates = data.map(workout => {
-          // The completed_at is in UTC, so we need to convert it to local time
-          const date = new Date(workout.completed_at);
-          // Get the local date string in YYYY-MM-DD format
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        }).sort();
 
-        // Mark each workout date individually
-        workoutDates.forEach(dateStr => {
+        // Step 1: Mark individual workout days with dots
+        data.forEach(workout => {
+          const workoutDate = new Date(workout.completed_at);
+          const localWorkoutDate = new Date(workoutDate.getTime() - (workoutDate.getTimezoneOffset() * 60000));
+          const dateStr = localWorkoutDate.toISOString().split('T')[0];
+          
           marked[dateStr] = {
-            startingDay: true,
-            endingDay: true,
-            color: colors.semantic.success.main,
-            textColor: colors.text.inverse
+            marked: true,
+            dotColor: workout.is_rest_day ? colors.calendar.streak.dot.rest : colors.calendar.streak.dot.active
           };
         });
 
-        // Handle today's date if no workout
+        // Step 2: Group workouts by week
+        const workoutsByWeek = new Map<string, WorkoutLog[]>();
+        data.forEach(workout => {
+          const workoutDate = new Date(workout.completed_at);
+          // Get the Sunday of the week
+          const weekStart = new Date(workoutDate);
+          weekStart.setDate(workoutDate.getDate() - (workoutDate.getDay() - 1));
+          const weekKey = weekStart.toISOString().split('T')[0];
+          
+          if (!workoutsByWeek.has(weekKey)) {
+            workoutsByWeek.set(weekKey, []);
+          }
+          workoutsByWeek.get(weekKey)?.push(workout);
+        });
+
+        // Step 3: Process each week for streaks
+        workoutsByWeek.forEach((weekWorkouts, weekStart) => {
+          const weekStartDate = new Date(weekStart);
+          const weekEndDate = new Date(weekStartDate);
+          weekEndDate.setDate(weekStartDate.getDate() + 6);
+
+          // Count non-rest day workouts for the week
+          const nonRestWorkouts = weekWorkouts.filter(w => !w.is_rest_day);
+          const weekWorkoutCount = nonRestWorkouts.length;
+          const weeklyGoal = profile?.weekly_goal || 0;
+          const isWeekComplete = weekWorkoutCount >= weeklyGoal;
+
+          // Log week information
+          console.log(`Week starting ${weekStart}:`);
+          console.log(`- Total workouts: ${weekWorkouts.length}`);
+          console.log(`- Non-rest day workouts: ${weekWorkoutCount}`);
+          console.log(`- Weekly goal: ${weeklyGoal}`);
+          console.log(`- Week complete: ${isWeekComplete}`);
+          console.log('-------------------');
+
+          // Only apply streak if week is complete
+          if (isWeekComplete) {
+            const startYear = weekStartDate.getFullYear();
+            const startMonth = String(weekStartDate.getMonth() + 1).padStart(2, '0');
+            const startDay = String(weekStartDate.getDate()).padStart(2, '0');
+            const startDateStr = `${startYear}-${startMonth}-${startDay}`;
+
+            const endYear = weekEndDate.getFullYear();
+            const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
+            const endDay = String(weekEndDate.getDate()).padStart(2, '0');
+            const endDateStr = `${endYear}-${endMonth}-${endDay}`;
+
+            // Mark the streak period
+            marked[startDateStr] = {
+              ...marked[startDateStr],
+              startingDay: true,
+              color: colors.calendar.streak.background,
+              textColor: colors.calendar.streak.text
+            };
+
+            marked[endDateStr] = {
+              ...marked[endDateStr],
+              endingDay: true,
+              color: colors.calendar.streak.background,
+              textColor: colors.calendar.streak.text
+            };
+
+            // Mark days in between
+            const currentDate = new Date(weekStartDate);
+            currentDate.setDate(currentDate.getDate() + 1); // Start from Monday
+            while (currentDate < weekEndDate) {
+              const year = currentDate.getFullYear();
+              const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+              const day = String(currentDate.getDate()).padStart(2, '0');
+              const dateStr = `${year}-${month}-${day}`;
+
+              // Preserve workout day markers while adding streak background
+              marked[dateStr] = {
+                ...marked[dateStr],
+                color: colors.calendar.streak.background,
+                textColor: colors.calendar.streak.text
+              };
+
+              currentDate.setDate(currentDate.getDate() + 1);
+            }
+          }
+        });
+
+        // Step 4: Mark today in red if not logged yet
         if (!marked[todayStr]) {
           marked[todayStr] = {
-            startingDay: true,
-            endingDay: true,
-            color: colors.primary.main,
-            textColor: colors.text.inverse
+            marked: true,
+            dotColor: colors.semantic.error.main
           };
         }
 

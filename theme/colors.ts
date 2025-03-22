@@ -57,6 +57,18 @@ export const colors = {
     default: '#121212FF', // Light grey background
     paper: '#252525FF', // White paper background
   },
+
+  // Calendar streak colors
+  calendar: {
+    streak: {
+      background: '#CDCDCDFF', // Orange background for streak days
+      text: '#000000', // Black text for streak days
+      dot: {
+        active: '#00801CFF', // Green dot for completed workout
+        rest: '#006F80FF', // Blue dot for rest day
+      }
+    }
+  },
   
   // Text colors
   text: {
