@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -30,12 +31,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Please fill in all fields');
+      Alert.alert(
+        'Missing Information',
+        'Please fill in all fields to continue.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
     setIsLoading(true);
-    setError(null);
 
     try {
       const { data: { session }, error: signInError } = await supabase.auth.signInWithPassword({
@@ -43,10 +47,30 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         password,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        if (signInError.message.includes('Invalid login credentials')) {
+          Alert.alert(
+            'Login Failed',
+            'Invalid email or password. Please try again.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Error',
+            'Unable to log in. Please try again later.',
+            [{ text: 'OK' }]
+          );
+        }
+        return;
+      }
 
       if (!session?.user) {
-        throw new Error('No session after login');
+        Alert.alert(
+          'Error',
+          'Unable to create session. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
 
       // Check if user has completed onboarding
@@ -56,7 +80,14 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         .eq('id', session.user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        Alert.alert(
+          'Error',
+          'Unable to load profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
 
       // Navigate based on onboarding status
       if (!profile.has_completed_onboarding) {
@@ -66,7 +97,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to log in');
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again later.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }

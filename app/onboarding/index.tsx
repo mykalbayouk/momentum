@@ -97,6 +97,13 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
             placeholderTextColor={colors.text.secondary}
             keyboardType="numeric"
           />
+          <Text style={styles.description}>
+            Your weekly goal determines how many days you need to work out each week to maintain your streak. For example, if you set your goal to 5 days:
+            {'\n\n'}• You need to complete 5 workouts (excluding rest days) each week
+            {'\n'}• Meeting this goal increases your streak by 1 week
+            {'\n'}• Missing the goal breaks your streak
+            {'\n\n'}Choose a goal that's challenging but achievable for your schedule.
+          </Text>
 
           <Text style={styles.label}>Join a Group (Optional)</Text>
           <GroupCodeInput
@@ -158,12 +165,21 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   avatar: {
+    width: 120,
+    height: 120,
     borderRadius: 60,
+    overflow: 'hidden',
   },
   submitButton: {
     marginTop: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 16,
+    lineHeight: 20,
   },
 }); 

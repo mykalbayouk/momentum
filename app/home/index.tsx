@@ -12,7 +12,7 @@ import {
 import Card from '../../components/Card';
 import Badge from '../../components/Badge';
 import Calendar from '../../components/Calendar';
-import WorkoutModal from '../../components/WorkoutModal';
+import ViewWorkoutModal from '../../components/ViewWorkoutModal';
 import WeeklyProgress from '../../components/WeeklyProgress';
 import { colors } from '../../theme/colors';
 import { supabase } from '../../utils/supabase';
@@ -49,7 +49,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [markedDates, setMarkedDates] = useState<any>({});
-  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+  const [showViewWorkoutModal, setShowViewWorkoutModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<{ dateString: string } | null>(null);
 
   useEffect(() => {
@@ -127,6 +127,17 @@ export default function HomeScreen() {
     try {
       if (!session?.user?.id) return;
 
+      // First, get the profile data to get the weekly goal
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('weekly_goal')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const weeklyGoal = profileData?.weekly_goal || 0;
+
       const { data, error } = await supabase
         .from('workout_logs')
         .select('id, completed_at, workout_type, duration, intensity, notes, image_url, is_rest_day')
@@ -170,6 +181,43 @@ export default function HomeScreen() {
           workoutsByWeek.get(weekKey)?.push(workout);
         });
 
+        // Calculate streaks
+        const weeks = Array.from(workoutsByWeek.keys()).sort();
+        let currentStreak = 0;
+        let longestStreak = 0;
+        let tempStreak = 0;
+
+        // Process weeks from most recent to oldest
+        for (let i = weeks.length - 1; i >= 0; i--) {
+          const weekKey = weeks[i];
+          const weekWorkouts = workoutsByWeek.get(weekKey) || [];
+          const nonRestWorkouts = weekWorkouts.filter(w => !w.is_rest_day);
+          const isWeekComplete = nonRestWorkouts.length >= weeklyGoal;
+
+          if (isWeekComplete) {
+            tempStreak++;
+            if (i === weeks.length - 1) {
+              currentStreak = tempStreak;
+            }
+            longestStreak = Math.max(longestStreak, tempStreak);
+          } else {
+            tempStreak = 0;
+          }
+        }
+
+        // Update profile with new streak values
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            current_streak: currentStreak,
+            longest_streak: longestStreak
+          })
+          .eq('id', session.user.id);
+
+        if (updateError) {
+          console.error('Error updating streaks:', updateError);
+        }
+
         // Step 3: Process each week for streaks
         workoutsByWeek.forEach((weekWorkouts, weekStart) => {
           const weekStartDate = new Date(weekStart);
@@ -179,7 +227,6 @@ export default function HomeScreen() {
           // Count non-rest day workouts for the week
           const nonRestWorkouts = weekWorkouts.filter(w => !w.is_rest_day);
           const weekWorkoutCount = nonRestWorkouts.length;
-          const weeklyGoal = profile?.weekly_goal || 0;
           const isWeekComplete = weekWorkoutCount >= weeklyGoal;
 
           // Log week information
@@ -282,44 +329,46 @@ export default function HomeScreen() {
     // Only show modal if there's a workout for that date
     if (dayWorkouts.length > 0) {
       setSelectedDate(date);
-      setShowWorkoutModal(true);
+      setShowViewWorkoutModal(true);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Momentum</Text>
-        </View>
+    <>
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Momentum</Text>
+          </View>
 
-        <View style={styles.streaksContainer}>
-          <Card variant="elevated" style={{ ...styles.streakCard, backgroundColor: colors.primary.main }}>
-            <Text style={styles.streakLabel}>Current Streak</Text>
-            <Text style={styles.streakValue}>{profile?.current_streak || 0} days</Text>
-          </Card>
-          <Card variant="elevated" style={styles.streakCard}>
-            <Text style={styles.streakLabel}>Longest Streak</Text>
-            <Text style={styles.streakValue}>{profile?.longest_streak || 0} days</Text>
-          </Card>
-        </View>
+          <View style={styles.streaksContainer}>
+            <Card variant="elevated" style={{ ...styles.streakCard, backgroundColor: colors.primary.main }}>
+              <Text style={styles.streakLabel}>Current Streak</Text>
+              <Text style={styles.streakValue}>{profile?.current_streak || 0} weeks</Text>
+            </Card>
+            <Card variant="elevated" style={styles.streakCard}>
+              <Text style={styles.streakLabel}>Longest Streak</Text>
+              <Text style={styles.streakValue}>{profile?.longest_streak || 0} weeks</Text>
+            </Card>
+          </View>
 
-        {profile?.weekly_goal && (
-          <WeeklyProgress weeklyGoal={profile.weekly_goal} />
-        )}
+          {profile?.weekly_goal && (
+            <WeeklyProgress weeklyGoal={profile.weekly_goal} />
+          )}
 
-        <View style={styles.calendarContainer}>
-          <Calendar
-            markedDates={markedDates}
-            onDayPress={handleDayPress}
-          />
-        </View>
-      </ScrollView>
+          <View style={styles.calendarContainer}>
+            <Calendar
+              markedDates={markedDates}
+              onDayPress={handleDayPress}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
 
-      <WorkoutModal
-        visible={showWorkoutModal}
+      <ViewWorkoutModal
+        visible={showViewWorkoutModal}
         onClose={() => {
-          setShowWorkoutModal(false);
+          setShowViewWorkoutModal(false);
           setSelectedDate(null);
         }}
         onUpdate={loadWorkoutLogs}
@@ -329,7 +378,7 @@ export default function HomeScreen() {
           return localWorkoutDate.toISOString().split('T')[0] === selectedDate?.dateString;
         })}
       />
-    </SafeAreaView>
+    </>
   );
 }
 

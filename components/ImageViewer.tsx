@@ -22,11 +22,11 @@ export default function ImageViewer({
       {url ? (
         <Image
           source={{ uri: url }}
-          style={[imageSize, styles.image]}
+          style={[imageSize, styles.image, style]}
           accessibilityLabel="User avatar"
         />
       ) : (
-        <View style={[imageSize, styles.noImage]}>
+        <View style={[imageSize, styles.noImage, style]}>
           <Text style={styles.placeholderText}>{placeholder}</Text>
         </View>
       )}
@@ -36,16 +36,18 @@ export default function ImageViewer({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 9999, // Makes it circular
     overflow: 'hidden',
+    borderRadius: 9999,
   },
   image: {
+    resizeMode: 'cover',
     borderRadius: 9999,
   },
   noImage: {
     backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 9999,
   },
   placeholderText: {
     fontSize: 20,

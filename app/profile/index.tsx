@@ -38,7 +38,6 @@ interface Profile {
   weekly_goal: number;
 }
 
-
 export default function ProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [session, setSession] = useState<Session | null>(null);
@@ -47,9 +46,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [weeklyGoal, setWeeklyGoal] = useState('');
-  const [emailError, setEmailError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState('');
@@ -86,7 +83,6 @@ export default function ProfileScreen() {
           const newProfile = payload.new as Profile;
           setProfile(newProfile);
           setUsername(newProfile.username || '');
-          setEmail(newProfile.email || '');
           setWeeklyGoal(newProfile.weekly_goal?.toString() || '');
         }
       )
@@ -116,7 +112,6 @@ export default function ProfileScreen() {
       if (data) {
         setProfile(data);
         setUsername(data.username || '');
-        setEmail(data.email || '');
         setWeeklyGoal(data.weekly_goal?.toString() || '');
       }
     } catch (error) {
@@ -125,28 +120,6 @@ export default function ProfileScreen() {
       }
     } finally {
       setLoading(false);
-    }
-  }
-
-  // Add function to check if email exists
-  async function checkEmailExists(email: string): Promise<boolean> {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .neq('id', session?.user?.id || '')
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
-        console.error('Error checking email:', error);
-        return false;
-      }
-
-      return !!data;
-    } catch (error) {
-      console.error('Error checking email:', error);
-      return false;
     }
   }
 
@@ -185,19 +158,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Update the email change handler
-  const handleEmailChange = async (newEmail: string) => {
-    setEmail(newEmail);
-    setEmailError(null);
-    
-    if (newEmail !== profile?.email) {
-      const exists = await checkEmailExists(newEmail);
-      if (exists) {
-        setEmailError('This email is already in use');
-      }
-    }
-  };
-
   async function updateProfile() {
     try {
       if (!session?.user) throw new Error('No user on the session!');
@@ -207,15 +167,6 @@ export default function ProfileScreen() {
         const exists = await checkUsernameExists(username);
         if (exists) {
           setUsernameError('This username is already taken');
-          return;
-        }
-      }
-
-      // Check if email exists before updating
-      if (email !== profile?.email) {
-        const exists = await checkEmailExists(email);
-        if (exists) {
-          setEmailError('This email is already in use');
           return;
         }
       }
@@ -237,19 +188,11 @@ export default function ProfileScreen() {
         }
       }
 
-      // Update email in auth
-      const { error: emailError } = await supabase.auth.updateUser({
-        email: email,
-      });
-
-      if (emailError) throw emailError;
-
       // Update profile data
       const { error } = await supabase
         .from('profiles')
         .update({
           username,
-          email,
           weekly_goal: parseInt(weeklyGoal),
           avatar_url: finalImageUrl,
           updated_at: new Date().toISOString()
@@ -260,7 +203,6 @@ export default function ProfileScreen() {
 
       Alert.alert('Success', 'Profile updated successfully');
       setIsEditing(false);
-      setEmailError(null);
       setUsernameError(null);
       setSelectedImageUri(null);
       setImageUrl('');
@@ -438,26 +380,7 @@ export default function ProfileScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              {isEditing ? (
-                <View>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      emailError ? styles.inputError : null
-                    ]}
-                    value={email}
-                    onChangeText={handleEmailChange}
-                    placeholder="Enter email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                  {emailError && (
-                    <Text style={styles.errorText}>{emailError}</Text>
-                  )}
-                </View>
-              ) : (
-                <Text style={styles.value}>{profile.email}</Text>
-              )}
+              <Text style={styles.value}>{profile.email}</Text>
             </View>
 
             <View style={styles.inputGroup}>
@@ -544,18 +467,9 @@ export default function ProfileScreen() {
           </View>
           <ScrollView style={styles.modalContent}>
             <Card variant="elevated" style={styles.settingsCard}>
-              {/* <TouchableOpacity style={styles.settingItem}
-              >
-                <Text style={styles.settingText}>Notifications</Text>
-                <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-              </TouchableOpacity> */}
-              {/* <TouchableOpacity style={styles.settingItem}>
-                <Text style={styles.settingText}>Privacy</Text>
-                <Feather name="chevron-right" size={20} color={colors.text.secondary} />
-              </TouchableOpacity> */}
               <TouchableOpacity 
-              style={styles.settingItem}
-              onPress={handleHelp}
+                style={styles.settingItem}
+                onPress={handleHelp}
               >
                 <Text style={styles.settingText}>Help & Support</Text>
                 <Feather name="chevron-right" size={20} color={colors.text.secondary} />

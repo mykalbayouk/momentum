@@ -8,9 +8,7 @@ import {
   ScrollView,
   SafeAreaView,
   Modal,
-  Image,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
@@ -21,6 +19,7 @@ import { supabase } from '../../utils/supabase';
 import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import GroupCodeInput from '../../components/GroupCodeInput';
 import ImageViewer from '../../components/ImageViewer';
+import ProfileModal from '../../components/ProfileModal';
 
 interface Profile {
   id: string;
@@ -44,6 +43,12 @@ interface GroupMember {
   username: string;
   avatar_url: string | null;
   current_streak: number;
+  longest_streak: number;
+  weekly_goal: number;
+  workout_logs: {
+    completed_at: string;
+    is_rest_day: boolean;
+  }[];
 }
 
 interface CurrentGroup extends Group {
@@ -67,6 +72,8 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
   onLeavePress = () => {},
   containerStyle,
 }) => {
+  const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
+
   return (
     <ScrollView style={[styles.scrollView, containerStyle]}>
       <View style={styles.header}>
@@ -110,22 +117,40 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
         {group.members
           .sort((a, b) => b.current_streak - a.current_streak)
           .map(member => (
-            <Card key={member.id} variant="elevated" style={styles.memberCard}>
-              <View style={styles.memberContent}>
-                <ImageViewer
-                  url={member.avatar_url}
-                  size={48}
-                  placeholder={member.username[0]}
-                />
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>{member.username}</Text>
-                  <Text style={styles.streakText}>{member.current_streak} day streak</Text>
+            <TouchableOpacity
+              key={member.id}
+              onPress={() => setSelectedMember(member)}
+            >
+              <Card variant="elevated" style={styles.memberCard}>
+                <View style={styles.memberContent}>
+                  <ImageViewer
+                    url={member.avatar_url}
+                    size={48}
+                    placeholder={member.username[0]}
+                  />
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>{member.username}</Text>
+                    <Text style={styles.streakText}>{member.current_streak} day streak</Text>
+                  </View>
                 </View>
-              </View>
-            </Card>
+              </Card>
+            </TouchableOpacity>
           ))
         }
       </View>
+
+      <ProfileModal
+        visible={!!selectedMember}
+        onClose={() => setSelectedMember(null)}
+        user={{
+          username: selectedMember?.username || '',
+          profilePicture: selectedMember?.avatar_url || undefined,
+          currentStreak: selectedMember?.current_streak || 0,
+          longestStreak: selectedMember?.longest_streak || 0,
+          weekly_goal: selectedMember?.weekly_goal || 0,
+          workouts: selectedMember?.workout_logs || [],
+        }}
+      />
     </ScrollView>
   );
 };
@@ -188,7 +213,13 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                   id,
                   username,
                   avatar_url,
-                  current_streak
+                  current_streak,
+                  longest_streak,
+                  weekly_goal,
+                  workout_logs (
+                    completed_at,
+                    is_rest_day
+                  )
                 )
               `)
               .eq('id', newProfile.group_id)
@@ -235,7 +266,13 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                   id,
                   username,
                   avatar_url,
-                  current_streak
+                  current_streak,
+                  longest_streak,
+                  weekly_goal,
+                  workout_logs (
+                    completed_at,
+                    is_rest_day
+                  )
                 )
               `)
               .eq('id', currentGroup.id)
@@ -307,7 +344,13 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
               id,
               username,
               avatar_url,
-              current_streak
+              current_streak,
+              longest_streak,
+              weekly_goal,
+              workout_logs (
+                completed_at,
+                is_rest_day
+              )
             )
           `)
           .eq('id', profile.group_id)
@@ -346,7 +389,13 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
             id,
             username,
             avatar_url,
-            current_streak
+            current_streak,
+            longest_streak,
+            weekly_goal,
+            workout_logs (
+              completed_at,
+              is_rest_day
+            )
           )
         `)
         .eq('id', group.id)

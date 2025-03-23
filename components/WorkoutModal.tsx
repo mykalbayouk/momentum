@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
   TouchableWithoutFeedback,
+  Animated,
 } from 'react-native';
 import { colors } from '../theme/colors';
 import Button from './Button';
@@ -15,6 +16,7 @@ import Card from './Card';
 import Dropdown from './Dropdown';
 import Toast from './Toast';
 import ImageSelector from './ImageSelector';
+import Feather from 'react-native-vector-icons/Feather';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { getLocalDateISO, getStartOfToday, getEndOfToday, getYesterday, getStartOfWeek, getEndOfWeek } from '../utils/dateUtils';
@@ -50,6 +52,7 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRestDay, setIsRestDay] = useState(workout?.is_rest_day || false);
+  const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
   const workoutTypes: WorkoutType[] = [
     'Strength Training',
@@ -217,6 +220,21 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
     }
   };
 
+  const toggleRestDay = () => {
+    Animated.spring(rotateAnim, {
+      toValue: isRestDay ? 0 : 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40,
+    }).start();
+    setIsRestDay(!isRestDay);
+  };
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
     <Modal
       visible={visible}
@@ -224,122 +242,132 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
       transparent={true}
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
-            <Card variant="elevated" style={styles.modalContent}>
-              <ScrollView>
-                <View style={styles.header}>
-                  <Text style={styles.title}>{workout ? 'Edit Workout' : 'Log Workout'}</Text>
-                  <TouchableOpacity onPress={onClose}>
-                    <Text style={styles.closeButton}>✕</Text>
+      <View style={styles.modalOverlay}>
+        <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+          <Card variant="elevated" style={styles.modalContent}>
+            <ScrollView>
+              <View style={styles.header}>
+                <Text style={styles.title}>{workout ? 'Edit Workout' : 'Log Workout'}</Text>
+                <TouchableOpacity onPress={onClose}>
+                  <Text style={styles.closeButton}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.content}>
+                <View style={styles.toggleContainer}>
+                  <Text style={styles.toggleHelperText}>
+                    Tap the button below to switch between Workout Day and Rest Day
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      isRestDay && { backgroundColor: colors.calendar.streak.dot.rest }
+                    ]}
+                    onPress={toggleRestDay}
+                  >
+                    <Animated.View style={[styles.toggleContent, { transform: [{ rotate }] }]}>
+                      <Feather 
+                        name={isRestDay ? "moon" : "activity"} 
+                        size={24} 
+                        color={isRestDay ? colors.text.inverse : colors.text.primary} 
+                      />
+                    </Animated.View>
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.content}>
-                  <TouchableOpacity
-                    style={[styles.restDayToggle, isRestDay && styles.restDayToggleActive]}
-                    onPress={() => setIsRestDay(!isRestDay)}
-                  >
-                    <Text style={[styles.restDayToggleText, isRestDay && styles.restDayToggleTextActive]}>
-                      {isRestDay ? 'Rest Day' : 'Workout Day'}
-                    </Text>
-                  </TouchableOpacity>
+                {!isRestDay && (
+                  <>
+                    <Text style={styles.label}>Workout Type</Text>
+                    <Dropdown
+                      options={workoutTypes}
+                      value={workoutType}
+                      onSelect={(type) => setWorkoutType(type as WorkoutType)}
+                      style={styles.dropdown}
+                    />
 
-                  {!isRestDay && (
-                    <>
-                      <Text style={styles.label}>Workout Type</Text>
-                      <Dropdown
-                        options={workoutTypes}
-                        value={workoutType}
-                        onSelect={(type) => setWorkoutType(type as WorkoutType)}
-                        style={styles.dropdown}
+                    <View style={styles.imageContainer}>
+                      <ImageSelector 
+                        url={imageUrl}
+                        size={200}
+                        onSelect={handleImageSelect}
+                        viewMode="display"
+                        placeholder=""
+                        style={styles.workoutImage}
                       />
+                    </View>
 
-                      <View style={styles.imageContainer}>
-                        <ImageSelector 
-                          url={imageUrl}
-                          size={200}
-                          onSelect={handleImageSelect}
-                          viewMode="display"
-                          placeholder=""
-                          style={styles.workoutImage}
+                    <TouchableOpacity
+                      style={styles.optionalToggle}
+                      onPress={() => setShowOptionalFields(!showOptionalFields)}
+                    >
+                      <Text style={styles.optionalToggleText}>
+                        {showOptionalFields ? 'Hide Optional Fields' : 'Show Optional Fields'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {showOptionalFields && (
+                      <View style={styles.optionalSection}>
+                        <Text style={styles.label}>Duration (minutes)</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={duration}
+                          onChangeText={setDuration}
+                          placeholder="Enter duration in minutes"
+                          placeholderTextColor={colors.text.secondary}
+                          keyboardType="numeric"
+                        />
+
+                        <Text style={styles.label}>Intensity (1-10)</Text>
+                        <View style={styles.intensityContainer}>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                            <TouchableOpacity
+                              key={level}
+                              style={[
+                                styles.intensityButton,
+                                intensity === level && styles.intensityButtonActive,
+                              ]}
+                              onPress={() => setIntensity(level)}
+                            >
+                              <Text
+                                style={[
+                                  styles.intensityButtonText,
+                                  intensity === level && styles.intensityButtonTextActive,
+                                ]}
+                              >
+                                {level}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
+                        <Text style={styles.label}>Notes</Text>
+                        <TextInput
+                          style={[styles.input, styles.textArea]}
+                          value={notes}
+                          onChangeText={setNotes}
+                          placeholder="Add any notes about your workout"
+                          placeholderTextColor={colors.text.secondary}
+                          multiline
+                          numberOfLines={4}
                         />
                       </View>
+                    )}
+                  </>
+                )}
 
-                      <TouchableOpacity
-                        style={styles.optionalToggle}
-                        onPress={() => setShowOptionalFields(!showOptionalFields)}
-                      >
-                        <Text style={styles.optionalToggleText}>
-                          {showOptionalFields ? 'Hide Optional Fields' : 'Show Optional Fields'}
-                        </Text>
-                      </TouchableOpacity>
-
-                      {showOptionalFields && (
-                        <View style={styles.optionalSection}>
-                          <Text style={styles.label}>Duration (minutes)</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={duration}
-                            onChangeText={setDuration}
-                            placeholder="Enter duration in minutes"
-                            placeholderTextColor={colors.text.secondary}
-                            keyboardType="numeric"
-                          />
-
-                          <Text style={styles.label}>Intensity (1-10)</Text>
-                          <View style={styles.intensityContainer}>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
-                              <TouchableOpacity
-                                key={level}
-                                style={[
-                                  styles.intensityButton,
-                                  intensity === level && styles.intensityButtonActive,
-                                ]}
-                                onPress={() => setIntensity(level)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.intensityButtonText,
-                                    intensity === level && styles.intensityButtonTextActive,
-                                  ]}
-                                >
-                                  {level}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-
-                          <Text style={styles.label}>Notes</Text>
-                          <TextInput
-                            style={[styles.input, styles.textArea]}
-                            value={notes}
-                            onChangeText={setNotes}
-                            placeholder="Add any notes about your workout"
-                            placeholderTextColor={colors.text.secondary}
-                            multiline
-                            numberOfLines={4}
-                          />
-                        </View>
-                      )}
-                    </>
-                  )}
-
-                  <View style={styles.buttonContainer}>
-                    <Button
-                      title={isLoading ? "Saving..." : "Log Workout"}
-                      onPress={handleSubmit}
-                      style={styles.submitButton}
-                      disabled={isLoading}
-                    />
-                  </View>
+                <View style={styles.buttonContainer}>
+                  <Button
+                    title={isLoading ? "Saving..." : isRestDay ? "Log Rest Day" : "Log Workout"}
+                    onPress={handleSubmit}
+                    style={isRestDay ? { ...styles.submitButton, backgroundColor: colors.calendar.streak.dot.rest } : styles.submitButton}
+                    disabled={isLoading}
+                  />
                 </View>
-              </ScrollView>
-            </Card>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+              </View>
+            </ScrollView>
+          </Card>
+        </TouchableWithoutFeedback>
+      </View>
       {error && <Toast message={error} onHide={() => setError(null)} />}
     </Modal>
   );
@@ -373,7 +401,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   content: {
-    gap: 16,
+    gap: 12,
   },
   label: {
     fontSize: 16,
@@ -394,7 +422,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
     width: '100%',
   },
   workoutImage: {
@@ -444,7 +472,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     gap: 12,
-    marginTop: 24,
+    marginTop: 16,
   },
   submitButton: {
     marginBottom: 8,
@@ -452,22 +480,34 @@ const styles = StyleSheet.create({
   dropdown: {
     marginBottom: 16,
   },
-  restDayToggle: {
-    padding: 12,
-    backgroundColor: colors.neutral.grey200,
-    borderRadius: 12,
-    marginBottom: 16,
+  toggleContainer: {
     alignItems: 'center',
+    marginBottom: 16,
   },
-  restDayToggleActive: {
+  toggleHelperText: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  toggleButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.neutral.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  restDayToggleText: {
-    color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  restDayToggleTextActive: {
-    color: colors.text.inverse,
+  toggleContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 
