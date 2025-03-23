@@ -115,23 +115,23 @@ export default function ImageSelector({
             mediaTypes: "images",
             allowsEditing: true,
             aspect: viewMode === 'avatar' ? [1, 1] as [number, number] : [4, 3] as [number, number],
-            quality: 0.7,
-            exif: false,
+            quality: 0.5,
           })
         : ImagePicker.launchImageLibraryAsync({
             mediaTypes: "images",
             allowsEditing: true,
             aspect: viewMode === 'avatar' ? [1, 1] as [number, number] : [4, 3] as [number, number],
-            quality: 0.7,
-            exif: false,
+            quality: 0.5,
           }));
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
+        setLoading(false);
         return;
       }
 
       const image = result.assets[0];
       if (!image.uri) {
+        setLoading(false);
         throw new Error('No image uri!');
       }
 
