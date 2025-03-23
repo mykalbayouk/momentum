@@ -379,8 +379,12 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{profile.email}</Text>
+              <Text style={styles.label}>Login Provider</Text>
+              <Text style={styles.value}>
+                {session?.user?.app_metadata?.provider === 'google' ? 'Google' : 
+                 session?.user?.app_metadata?.provider === 'apple' ? 'Apple' : 
+                 'Unknown'}
+              </Text>
             </View>
 
             <View style={styles.inputGroup}>

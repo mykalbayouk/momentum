@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   SafeAreaView,
   Alert,
+  Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../theme/colors';
@@ -18,97 +18,35 @@ import Card from '../../components/Card';
 import { supabase } from '../../utils/supabase';
 import Toast from '../../components/Toast';
 import { RootStackParamList } from '../../navigation/types';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+// Only import Google Sign-in on Android
+const GoogleSignin = Platform.OS === 'android' ? require('@react-native-google-signin/google-signin').default : null;
+const statusCodes = Platform.OS === 'android' ? require('@react-native-google-signin/google-signin').statusCodes : null;
+
+// Only import Apple Authentication on iOS
+const AppleAuthentication = Platform.OS === 'ios' ? require('expo-apple-authentication') : null;
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
 };
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert(
-        'Missing Information',
-        'Please fill in all fields to continue.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const { data: { session }, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+  // Initialize Google Sign In only on Android
+  React.useEffect(() => {
+    if (Platform.OS === 'android' && GoogleSignin) {
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+        offlineAccess: true,
       });
-
-      if (signInError) {
-        if (signInError.message.includes('Invalid login credentials')) {
-          Alert.alert(
-            'Login Failed',
-            'Invalid email or password. Please try again.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          Alert.alert(
-            'Error',
-            'Unable to log in. Please try again later.',
-            [{ text: 'OK' }]
-          );
-        }
-        return;
-      }
-
-      if (!session?.user) {
-        Alert.alert(
-          'Error',
-          'Unable to create session. Please try again.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      // Check if user has completed onboarding
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('has_completed_onboarding')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profileError) {
-        Alert.alert(
-          'Error',
-          'Unable to load profile. Please try again.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      // Navigate based on onboarding status
-      if (!profile.has_completed_onboarding) {
-        navigation.replace('Onboarding');
-      } else {
-        navigation.replace('MainApp');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert(
-        'Error',
-        'An unexpected error occurred. Please try again later.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, []);
 
   const handleAppleSignIn = async () => {
+    if (Platform.OS !== 'ios' || !AppleAuthentication) return;
+
     try {
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -173,6 +111,70 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    if (Platform.OS !== 'android' || !GoogleSignin) return;
+
+    try {
+      // Sign in with Google
+      await GoogleSignin.signIn();
+      const { idToken } = await GoogleSignin.getTokens();
+      
+      // Sign in with Supabase using the Google ID token
+      const { data: { session }, error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (signInError) {
+        console.error('Supabase sign in error:', signInError);
+        throw signInError;
+      }
+
+      if (!session?.user) {
+        Alert.alert(
+          'Error',
+          'Unable to create session. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Check if user has completed onboarding
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('has_completed_onboarding')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        Alert.alert(
+          'Error',
+          'Unable to load profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Navigate based on onboarding status
+      if (!profile.has_completed_onboarding) {
+        navigation.replace('Onboarding');
+      } else {
+        navigation.replace('MainApp');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes?.SIGN_IN_CANCELLED) {
+        // User canceled the sign-in flow
+        return;
+      }
+      console.error('Google Sign In error:', error);
+      Alert.alert(
+        'Error',
+        'Unable to sign in with Google. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -184,57 +186,38 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Log in to continue</Text>
+            <Image 
+              source={require('../../assets/images/icon.png')} 
+              style={styles.appIcon}
+            />
+            <Text style={styles.title}>Welcome to Momentum</Text>
+            <Text style={styles.subtitle}>Your personal fitness companion</Text>
+            <Text style={styles.description}>
+              Track your workouts, build habits, and achieve your fitness goals with Momentum. 
+              Sign in to start your fitness journey today.
+            </Text>
           </View>
 
           <Card variant="elevated" style={styles.card}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Enter your email"
-              placeholderTextColor={colors.text.secondary}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Enter your password"
-              placeholderTextColor={colors.text.secondary}
-              secureTextEntry
-            />
-
-            <Button
-              title={isLoading ? "Logging in..." : "Log In"}
-              onPress={handleLogin}
-              style={styles.submitButton}
-              disabled={isLoading}
-            />
-
-            {Platform.OS === 'ios' && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={8}
-                style={styles.appleButton}
-                onPress={handleAppleSignIn}
-              />
-            )}
-
-            <TouchableOpacity 
-              style={styles.signupLink}
-              onPress={() => navigation.navigate('Signup')}
-            >
-              <Text style={styles.signupText}>
-                Don't have an account? <Text style={styles.signupTextBold}>Sign up</Text>
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              {Platform.OS === 'android' && GoogleSignin ? (
+                <Button
+                  title="Sign in with Google"
+                  onPress={handleGoogleSignIn}
+                  style={styles.googleButton}
+                  variant="outline"
+                  icon={<MaterialCommunityIcons name="google" size={20} color={colors.text.primary} style={styles.googleIcon} />}
+                />
+              ) : Platform.OS === 'ios' && AppleAuthentication ? (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={8}
+                  style={styles.appleButton}
+                  onPress={handleAppleSignIn}
+                />
+              ) : null}
+            </View>
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -257,53 +240,52 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
+    alignItems: 'center',
+  },
+  appIcon: {
+    width: 100,
+    height: 100,
+    marginBottom: 16,
+    borderRadius: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: colors.text.primary,
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
+    fontSize: 18,
+    color: colors.text.secondary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  description: {
     fontSize: 16,
     color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
   },
   card: {
     padding: 16,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.neutral.grey300,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: colors.text.primary,
-    marginBottom: 16,
-  },
-  submitButton: {
-    marginTop: 8,
-  },
-  signupLink: {
-    marginTop: 16,
+  buttonContainer: {
     alignItems: 'center',
-  },
-  signupText: {
-    color: colors.text.secondary,
-    fontSize: 14,
-  },
-  signupTextBold: {
-    color: colors.primary.main,
-    fontWeight: '600',
+    width: '100%',
   },
   appleButton: {
     width: '100%',
     height: 44,
     marginTop: 16,
+  },
+  googleButton: {
+    width: '100%',
+    backgroundColor: colors.background.default,
+    borderColor: colors.neutral.grey300,
+  },
+  googleIcon: {
+    marginRight: 8,
   },
 }); 

@@ -131,7 +131,11 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
             placeholderTextColor={colors.text.secondary}
             autoCapitalize="none"
             autoCorrect={false}
+            maxLength={12}
           />
+          <Text style={[styles.description, username.length >= 12 && styles.warningText]}>
+            {username.length}/12 characters
+          </Text>
           <Text style={styles.description}>
             This username will be visible to other users. Choose something unique and memorable.
           </Text>
@@ -229,5 +233,8 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginBottom: 16,
     lineHeight: 20,
+  },
+  warningText: {
+    color: colors.error.main,
   },
 }); 

@@ -42,7 +42,11 @@
         {
           "clientId": "com.michaelbayouk.momentum"
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin"
       ]
+
     ],
     "extra": {
       "eas": {
