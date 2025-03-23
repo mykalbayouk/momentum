@@ -20,6 +20,7 @@ import { uploadImage } from '../../utils/imageUpload';
 export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const { session } = useAuth();
   const [activeDays, setActiveDays] = useState('5');
+  const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
@@ -37,6 +38,36 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
     setError(null);
 
     try {
+      // Validate username
+      if (!username.trim()) {
+        setError('Please enter a username');
+        setIsLoading(false);
+        return;
+      }
+
+      if (username.trim().length > 12) {
+        setError('Username must be 12 characters or less');
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if username is already taken
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username.trim())
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found
+        throw checkError;
+      }
+
+      if (existingUser) {
+        setError('This username is already taken');
+        setIsLoading(false);
+        return;
+      }
+
       let finalImageUrl = imageUrl;
 
       // Handle image upload if an image was selected
@@ -52,6 +83,9 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
           weekly_goal: parseInt(activeDays),
           has_completed_onboarding: true,
           avatar_url: finalImageUrl,
+          username: username.trim(),
+          current_streak: 0,
+          longest_streak: 0,
         })
         .eq('id', session.user.id);
 
@@ -87,6 +121,20 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
               style={styles.avatar}
             />
           </View>
+
+          <Text style={styles.label}>Username</Text>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Choose a username"
+            placeholderTextColor={colors.text.secondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.description}>
+            This username will be visible to other users. Choose something unique and memorable.
+          </Text>
 
           <Text style={styles.label}>Weekly Goal</Text>
           <TextInput

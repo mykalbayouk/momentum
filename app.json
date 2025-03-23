@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.michaelbayouk.momentum",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -19,7 +20,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.michaelbayouk.momentum"
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +35,12 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-apple-authentication",
+        {
+          "clientId": "com.michaelbayouk.momentum"
         }
       ]
     ],

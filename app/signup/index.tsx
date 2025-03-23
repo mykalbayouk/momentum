@@ -129,6 +129,28 @@ export default function SignupScreen() {
       }
 
       if (data?.user) {
+        // Create initial profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username: name,
+            current_streak: 0,
+            longest_streak: 0,
+            weekly_goal: 5, // Default value
+            has_completed_onboarding: false,
+          });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          Alert.alert(
+            'Error',
+            'Account created but failed to set up profile. Please try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+
         Alert.alert(
           'Success',
           'Please check your email to confirm your account',

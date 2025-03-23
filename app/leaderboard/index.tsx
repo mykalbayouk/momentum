@@ -67,6 +67,8 @@ export default function LeaderboardScreen() {
     try {
       setLoading(true);
       console.log('Fetching leaderboard data...');
+      
+      // Fetch the full leaderboard data
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -81,92 +83,130 @@ export default function LeaderboardScreen() {
             is_rest_day
           )
         `)
-        .not('current_streak', 'is', null)
-        .order('current_streak', { ascending: false })
-        .limit(50);
+        .order('current_streak', { ascending: false });
 
       if (error) {
         console.error('Error fetching leaderboard:', error);
         throw error;
       }
 
-      console.log('Leaderboard data received:', data);
-      if (data) {
-        // Ensure all required fields are present
-        const validUsers = data.filter(user => 
-          user.id && 
-          user.username && 
-          typeof user.current_streak === 'number'
-        );
-        console.log('Valid users:', validUsers);
-        setUsers(validUsers);
+      console.log('Raw leaderboard data:', JSON.stringify(data, null, 2));
+
+      if (data && data.length > 0) {
+        // Log each user's data for debugging
+        data.forEach((user, index) => {
+          console.log(`User ${index + 1}:`, {
+            id: user.id,
+            username: user.username,
+            current_streak: user.current_streak,
+            type: typeof user.current_streak
+          });
+        });
+
+        // Filter out users without required fields and ensure current_streak is a number
+        const validUsers = data.filter(user => {
+          const isValid = user.id && 
+            user.username && 
+            (typeof user.current_streak === 'number' || user.current_streak === null);
+          
+          if (!isValid) {
+            console.log('Invalid user data:', JSON.stringify(user, null, 2));
+          }
+          
+          return isValid;
+        });
+
+        // Convert any null current_streak to 0
+        const processedUsers = validUsers.map(user => ({
+          ...user,
+          current_streak: user.current_streak || 0
+        }));
+
+        console.log('Valid users count:', processedUsers.length);
+        console.log('Processed users:', JSON.stringify(processedUsers, null, 2));
+        
+        setUsers(processedUsers);
+      } else {
+        console.log('No data returned from query');
+        setUsers([]);
       }
     } catch (error) {
       console.error('Error in fetchLeaderboard:', error);
       if (error instanceof Error) {
         Alert.alert('Error', error.message);
       }
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   }
 
   const renderPodium = () => {
-    if (users.length < 3) return null;
-    const [first, second, third] = users;
+    if (users.length === 0) return null;
+    
+    // If we have less than 3 users, only show what we have
+    const podiumUsers = users.slice(0, 3);
+    const [first, second, third] = podiumUsers;
 
     return (
       <View style={styles.podiumContainer}>
         {/* Second Place */}
-        <View style={styles.podiumItem}>
-          <ImageViewer
-            url={second.avatar_url}
-            size={60}
-            placeholder={second.username[0]}
-          />
-          <View style={styles.podiumRank}>
-            <Text style={styles.podiumNumber}>2</Text>
+        {second && (
+          <View style={styles.podiumItem}>
+            <ImageViewer
+              url={second.avatar_url}
+              size={60}
+              placeholder={second.username[0]}
+            />
+            <View style={styles.podiumRank}>
+              <Text style={styles.podiumNumber}>2</Text>
+            </View>
+            <Text style={styles.podiumName} numberOfLines={1}>{second.username}</Text>
+            <Text style={styles.podiumScore}>{second.current_streak}</Text>
           </View>
-          <Text style={styles.podiumName} numberOfLines={1}>{second.username}</Text>
-          <Text style={styles.podiumScore}>{second.current_streak}</Text>
-        </View>
+        )}
 
         {/* First Place */}
-        <View style={[styles.podiumItem, styles.firstPlace]}>
-          <View style={styles.crownContainer}>
-            <FontAwesome5 name="crown" size={24} color={colors.primary.main} />
+        {first && (
+          <View style={[styles.podiumItem, styles.firstPlace]}>
+            <View style={styles.crownContainer}>
+              <FontAwesome5 name="crown" size={24} color={colors.primary.main} />
+            </View>
+            <ImageViewer
+              url={first.avatar_url}
+              size={80}
+              placeholder={first.username[0]}
+            />
+            <View style={[styles.podiumRank, styles.firstRank]}>
+              <Text style={styles.podiumNumber}>1</Text>
+            </View>
+            <Text style={styles.podiumName} numberOfLines={1}>{first.username}</Text>
+            <Text style={styles.podiumScore}>{first.current_streak}</Text>
           </View>
-          <ImageViewer
-            url={first.avatar_url}
-            size={80}
-            placeholder={first.username[0]}
-          />
-          <View style={[styles.podiumRank, styles.firstRank]}>
-            <Text style={styles.podiumNumber}>1</Text>
-          </View>
-          <Text style={styles.podiumName} numberOfLines={1}>{first.username}</Text>
-          <Text style={styles.podiumScore}>{first.current_streak}</Text>
-        </View>
+        )}
 
         {/* Third Place */}
-        <View style={styles.podiumItem}>
-          <ImageViewer
-            url={third.avatar_url}
-            size={60}
-            placeholder={third.username[0]}
-          />
-          <View style={styles.podiumRank}>
-            <Text style={styles.podiumNumber}>3</Text>
+        {third && (
+          <View style={styles.podiumItem}>
+            <ImageViewer
+              url={third.avatar_url}
+              size={60}
+              placeholder={third.username[0]}
+            />
+            <View style={styles.podiumRank}>
+              <Text style={styles.podiumNumber}>3</Text>
+            </View>
+            <Text style={styles.podiumName} numberOfLines={1}>{third.username}</Text>
+            <Text style={styles.podiumScore}>{third.current_streak}</Text>
           </View>
-          <Text style={styles.podiumName} numberOfLines={1}>{third.username}</Text>
-          <Text style={styles.podiumScore}>{third.current_streak}</Text>
-        </View>
+        )}
       </View>
     );
   };
 
   const renderListItem = (user: User, index: number) => {
-    if (index < 3) return null; // Skip top 3 as they're in podium
+    // Only skip if we have 3 or more users and this is one of the top 3
+    if (users.length >= 3 && index < 3) return null;
     
     return (
       <TouchableOpacity
@@ -310,7 +350,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.text.primary,
-    maxWidth: 100,
+    maxWidth: 80,
+    textAlign: 'center',
   },
   podiumScore: {
     fontSize: 16,
@@ -319,10 +360,11 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 12,
   },
   listItem: {
-    padding: 12,
+    padding: 16,
+    marginBottom: 4,
   },
   listItemContent: {
     flexDirection: 'row',
@@ -332,23 +374,28 @@ const styles = StyleSheet.create({
   rankAndUser: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
+    flex: 1,
   },
   listRank: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text.secondary,
-    width: 32,
+    width: 40,
+    textAlign: 'center',
   },
   listUsername: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
+    flex: 1,
+    maxWidth: 200,
   },
   listScore: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.primary.main,
+    marginLeft: 16,
   },
   emptyCard: {
     padding: 16,

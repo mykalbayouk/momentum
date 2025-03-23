@@ -18,6 +18,7 @@ import Card from '../../components/Card';
 import { supabase } from '../../utils/supabase';
 import Toast from '../../components/Toast';
 import { RootStackParamList } from '../../navigation/types';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -107,6 +108,71 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      // Sign in with Supabase using the Apple ID token
+      const { data: { session }, error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken!,
+      });
+
+      if (signInError) {
+        console.error('Supabase sign in error:', signInError);
+        throw signInError;
+      }
+
+      if (!session?.user) {
+        Alert.alert(
+          'Error',
+          'Unable to create session. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Check if user has completed onboarding
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('has_completed_onboarding')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        Alert.alert(
+          'Error',
+          'Unable to load profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Navigate based on onboarding status
+      if (!profile.has_completed_onboarding) {
+        navigation.replace('Onboarding');
+      } else {
+        navigation.replace('MainApp');
+      }
+    } catch (error: any) {
+      if (error.code === 'ERR_CANCELED') {
+        // User canceled the sign-in flow
+        return;
+      }
+      console.error('Apple Sign In error:', error);
+      Alert.alert(
+        'Error',
+        'Unable to sign in with Apple. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -150,6 +216,16 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               style={styles.submitButton}
               disabled={isLoading}
             />
+
+            {Platform.OS === 'ios' && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={8}
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
+              />
+            )}
 
             <TouchableOpacity 
               style={styles.signupLink}
@@ -224,5 +300,10 @@ const styles = StyleSheet.create({
   signupTextBold: {
     color: colors.primary.main,
     fontWeight: '600',
+  },
+  appleButton: {
+    width: '100%',
+    height: 44,
+    marginTop: 16,
   },
 }); 
