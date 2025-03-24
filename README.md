@@ -1,6 +1,6 @@
-# Momentum - Fitness Streak Tracker
+# Morementum - Fitness Streak Tracker
 
-Momentum is a fitness tracking app designed to help users build and maintain consistent workout habits through streak tracking and social motivation.
+Morementum is a fitness tracking app designed to help users build and maintain consistent workout habits through streak tracking and social motivation.
 
 ## Features
 

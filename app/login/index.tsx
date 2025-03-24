@@ -188,10 +188,10 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               source={require('../../assets/images/icon.png')} 
               style={styles.appIcon}
             />
-            <Text style={styles.title}>Welcome to Momentum</Text>
+            <Text style={styles.title}>Welcome to Morementum</Text>
             <Text style={styles.subtitle}>Your personal fitness companion</Text>
             <Text style={styles.description}>
-              Track your workouts, build habits, and achieve your fitness goals with Momentum. 
+              Track your workouts, build habits, and achieve your fitness goals with Morementum. 
               Sign in to start your fitness journey today.
             </Text>
           </View>

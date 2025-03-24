@@ -338,7 +338,7 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.container}>
         <ScrollView style={styles.scrollView}>
           <View style={styles.header}>
-            <Text style={styles.title}>Momentum</Text>
+            <Text style={styles.title}>Morementum</Text>
           </View>
 
           <View style={styles.streaksContainer}>

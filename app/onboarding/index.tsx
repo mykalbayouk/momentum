@@ -105,7 +105,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome to Momentum!</Text>
+          <Text style={styles.title}>Welcome to Morementum!</Text>
           <Text style={styles.subtitle}>Let's get you set up</Text>
         </View>
 

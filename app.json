@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "momentum",
-    "slug": "momentum",
+    "name": "morementum",
+    "slug": "morementum",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -14,14 +14,14 @@
       "bundleIdentifier": "com.michaelbayouk.momentum",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Momentum needs access to your photo library to let you select workout photos.",
-        "NSPhotoLibraryAddUsageDescription": "Momentum needs access to your photo library to save workout photos.",
-        "NSCameraUsageDescription": "Momentum needs access to your camera to take workout photos."
+        "NSPhotoLibraryUsageDescription": "Morementum needs access to your photo library to let you select workout photos.",
+        "NSPhotoLibraryAddUsageDescription": "Morementum needs access to your photo library to save workout photos.",
+        "NSCameraUsageDescription": "Morementum needs access to your camera to take workout photos."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.michaelbayouk.momentum"
@@ -49,7 +49,6 @@
       [
         "@react-native-google-signin/google-signin"
       ]
-
     ],
     "extra": {
       "eas": {
