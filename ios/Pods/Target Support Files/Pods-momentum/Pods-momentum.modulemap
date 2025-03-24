@@ -1,0 +1,6 @@
+module Pods_momentum {
+  umbrella header "Pods-momentum-umbrella.h"
+
+  export *
+  module * { export * }
+}
