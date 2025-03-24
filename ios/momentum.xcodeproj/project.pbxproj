@@ -29,12 +29,12 @@
 		2ACB06765E8A4E28AC231392 /* momentum-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "momentum-Bridging-Header.h"; path = "momentum/momentum-Bridging-Header.h"; sourceTree = "<group>"; };
 		7F4288FEF321AC289D4FAABE /* libPods-momentum.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-momentum.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = momentum/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B05047C82641F8D2610883F5 /* Pods-momentum.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.debug.xcconfig"; path = "Target Support Files/Pods-momentum/Pods-momentum.debug.xcconfig"; sourceTree = "<group>"; };
+		B05047C82641F8D2610883F5 /* Pods-momentum.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.debug.xcconfig"; path = "Pods/Target Support Files/Pods-momentum/Pods-momentum.debug.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		CCEF551EC96B1EBEDFDD475F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = momentum/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-momentum/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		FDB191A99FADB041A70FC940 /* Pods-momentum.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.release.xcconfig"; path = "Target Support Files/Pods-momentum/Pods-momentum.release.xcconfig"; sourceTree = "<group>"; };
+		FDB191A99FADB041A70FC940 /* Pods-momentum.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.release.xcconfig"; path = "Pods/Target Support Files/Pods-momentum/Pods-momentum.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -207,7 +207,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */ 
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */ = {
