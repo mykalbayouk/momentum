@@ -18,28 +18,28 @@ import Card from '../../components/Card';
 import Feather from 'react-native-vector-icons/Feather';
 import { supabase } from '../../utils/supabase';
 import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from '../../navigation/types';
+import { NavigationProp as BaseNavigationProp } from '@react-navigation/native';
 import { Session } from '@supabase/supabase-js';
 import { getLocalDate } from '../../utils/dateUtils';
 import ImageSelector from '../../components/ImageSelector';
 import { uploadImage, deleteImage } from '../../utils/imageUpload';
 import ImageViewer from '../../components/ImageViewer';
+import { realtimeDB, Profile } from '../../utils/RealtimeDB';
+import { StreakHelper } from '../../utils/StreakHelper';
 
-interface Profile {
-  id: string;
-  username: string;
-  email: string;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
-  current_streak: number;
-  longest_streak: number;
-  streak_count: number;
-  weekly_goal: number;
-}
+type RootStackParamList = {
+  Home: undefined;
+  Profile: undefined;
+  Leaderboard: undefined;
+  Groups: undefined;
+  Settings: undefined;
+  Login: undefined;
+};
+
+type AppNavigationProp = BaseNavigationProp<RootStackParamList>;
 
 export default function ProfileScreen() {
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<AppNavigationProp>();
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -50,6 +50,19 @@ export default function ProfileScreen() {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState('');
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const streakHelper = StreakHelper.getInstance();
+
+  // Add navigation listener to handle leaving edit mode
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
+      if (isEditing) {
+        handleLeaveEditMode();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, isEditing]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -68,58 +81,107 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!session?.user) return;
 
-    // Subscribe to profile changes
-    const subscription = supabase
-      .channel('profile-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${session.user.id}`,
-        },
-        async (payload) => {
-          const newProfile = payload.new as Profile;
+    console.log('[Profile] Setting up real-time subscription');
+    let isSubscribed = true;
+
+    async function initializeProfile() {
+      try {
+        // First get/create the profile
+        await getProfile();
+        
+        if (!isSubscribed) return;
+
+        // Then set up real-time updates
+        realtimeDB.subscribeToProfile(session!.user.id, (newProfile: Profile) => {
+          console.log('[Profile] Received profile update');
+          const displayStreak = streakHelper.calculateDisplayStreak(
+            newProfile.current_streak,
+            newProfile.is_week_complete
+          );
+          setCurrentStreak(displayStreak);
           setProfile(newProfile);
           setUsername(newProfile.username || '');
           setWeeklyGoal(newProfile.weekly_goal?.toString() || '');
-        }
-      )
-      .subscribe();
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error('[Profile] Error initializing profile:', error);
+        setLoading(false);
+      }
+    }
 
-    // Initial data fetch
-    getProfile();
+    initializeProfile();
 
     return () => {
-      subscription.unsubscribe();
+      isSubscribed = false;
+      if (session?.user) {
+        console.log('[Profile] Cleaning up subscription');
+        realtimeDB.unsubscribe('profiles', () => {}, session.user.id);
+      }
     };
   }, [session]);
 
   async function getProfile() {
     try {
       setLoading(true);
-      if (!session?.user) throw new Error('No user on the session!');
+      const currentSession = session;
+      if (!currentSession?.user) throw new Error('No user on the session!');
 
+      console.log('[Profile] Checking if profile exists');
+      
+      // Check if profile exists
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', currentSession.user.id)
         .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows returned
+        throw error;
+      }
 
-      if (data) {
+      if (!data) {
+        console.log('[Profile] Creating new profile');
+        // Create a new profile if one doesn't exist
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: currentSession.user.id,
+              username: `user_${currentSession.user.id.slice(0, 6)}`,
+              email: currentSession.user.email,
+              avatar_url: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              current_streak: 0,
+              streak_count: 0,
+              weekly_goal: 3, // Default weekly goal
+              is_week_complete: false
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) {
+          throw createError;
+        }
+
+        console.log('[Profile] New profile created:', newProfile);
+        setProfile(newProfile);
+        setUsername(newProfile.username);
+        setWeeklyGoal(newProfile.weekly_goal?.toString() || '3');
+      } else {
+        console.log('[Profile] Found existing profile:', data);
         setProfile(data);
         setUsername(data.username || '');
         setWeeklyGoal(data.weekly_goal?.toString() || '');
       }
     } catch (error) {
+      console.error('[Profile] Error in getProfile:', error);
       if (error instanceof Error) {
-        Alert.alert('Error', error.message);
+        Alert.alert('Error', `Failed to load profile: ${error.message}`);
       }
-    } finally {
-      setLoading(false);
+      throw error; // Re-throw to handle in the caller
     }
   }
 
@@ -147,15 +209,29 @@ export default function ProfileScreen() {
 
   // Add username change handler
   const handleUsernameChange = async (newUsername: string) => {
-    setUsername(newUsername);
+    // Limit username to 12 characters
+    const truncatedUsername = newUsername.slice(0, 12);
+    setUsername(truncatedUsername);
     setUsernameError(null);
     
-    if (newUsername !== profile?.username) {
-      const exists = await checkUsernameExists(newUsername);
+    if (truncatedUsername !== profile?.username) {
+      const exists = await checkUsernameExists(truncatedUsername);
       if (exists) {
         setUsernameError('This username is already taken');
       }
     }
+  };
+
+  const handleWeeklyGoalChange = (text: string) => {
+    // Only allow numbers
+    const numericValue = text.replace(/[^0-9]/g, '');
+    
+    // Convert to number and validate
+    const value = parseInt(numericValue);
+    if (value < 1 || value > 7) {
+      return; // Don't update if value is invalid
+    }
+    setWeeklyGoal(numericValue);
   };
 
   async function updateProfile() {
@@ -200,6 +276,23 @@ export default function ProfileScreen() {
         .eq('id', session.user.id);
 
       if (error) throw error;
+
+      // Trigger a refresh of workout logs by updating the last workout log
+      // This will cause the home screen to recalculate streaks and progress
+      const { data: lastWorkout, error: workoutError } = await supabase
+        .from('workout_logs')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (lastWorkout && !workoutError) {
+        await supabase
+          .from('workout_logs')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', lastWorkout.id);
+      }
 
       Alert.alert('Success', 'Profile updated successfully');
       setIsEditing(false);
@@ -301,6 +394,16 @@ export default function ProfileScreen() {
     }
   };
 
+  // Reset form when leaving edit mode
+  const handleLeaveEditMode = () => {
+    setIsEditing(false);
+    setUsername(profile?.username || '');
+    setWeeklyGoal(profile?.weekly_goal?.toString() || '');
+    setSelectedImageUri(null);
+    setImageUrl('');
+    setUsernameError(null);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -390,14 +493,17 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Weekly Goal (days)</Text>
               {isEditing ? (
-                <TextInput
-                  style={styles.input}
-                  value={weeklyGoal}
-                  onChangeText={setWeeklyGoal}
-                  placeholder="Enter weekly goal"
-                  keyboardType="numeric"
-                  maxLength={1}
-                />
+                <View>
+                  <TextInput
+                    style={styles.input}
+                    value={weeklyGoal}
+                    onChangeText={handleWeeklyGoalChange}
+                    placeholder="Enter weekly goal"
+                    keyboardType="numeric"
+                    maxLength={1}
+                  />
+                  <Text style={styles.helperText}>Value must be between 1-7 days</Text>
+                </View>
               ) : (
                 <Text style={styles.value}>{profile.weekly_goal} days</Text>
               )}
@@ -405,13 +511,8 @@ export default function ProfileScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Current Streak</Text>
-              <Text style={styles.value}>{profile.current_streak} days</Text>
+              <Text style={styles.value}>{currentStreak} weeks</Text>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Longest Streak</Text>
-              <Text style={styles.value}>{profile.longest_streak} days</Text>
-            </View>            
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Member Since</Text>
@@ -431,7 +532,7 @@ export default function ProfileScreen() {
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
                   style={[styles.button, styles.cancelButton]}
-                  onPress={() => setIsEditing(false)}
+                  onPress={handleLeaveEditMode}
                 >
                   <Text style={styles.buttonText}>Cancel</Text>
                 </TouchableOpacity>
@@ -676,6 +777,11 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.error?.main || '#ff0000',
     fontSize: 12,
+    marginTop: 4,
+  },
+  helperText: {
+    fontSize: 12,
+    color: colors.text.secondary,
     marginTop: 4,
   },
 });

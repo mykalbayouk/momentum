@@ -10,6 +10,8 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { colors } from '../theme/colors';
 import { supabase } from '../utils/supabase';
@@ -17,7 +19,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { getStartOfWeek, getEndOfWeek } from '../utils/dateUtils';
 import ImageSelector from './ImageSelector';
 import ImageViewer from './ImageViewer';
-import { Picker } from '@react-native-picker/picker';
 import Card from './Card';
 import Feather from 'react-native-vector-icons/Feather';
 import Dropdown from './Dropdown';
@@ -30,7 +31,7 @@ interface ViewWorkoutModalProps {
   workout: {
     id: string;
     completed_at: string;
-    workout_type: string;
+    workout_type: WorkoutType;
     duration: string;
     intensity: number;
     notes: string;
@@ -39,31 +40,95 @@ interface ViewWorkoutModalProps {
   } | undefined;
 }
 
+type WorkoutType = 'Boxing' | 'Climbing' | 'Cycling' | 'Hiking' | 'Running' | 'Sports' | 'Strength Training' | 'Swimming' | 'Walking' | 'Yoga' | 'Other';
+
 const WORKOUT_TYPES = [
-  'Strength Training',
-  'Running',
-  'Swimming',
+  'Boxing',
   'Climbing',
   'Cycling',
-  'Yoga',
   'Hiking',
-  'Boxing',
+  'Running',
   'Sports',
+  'Strength Training',
+  'Swimming',
+  'Walking',
+  'Yoga',
   'Other'
 ];
+
+const DEFAULT_WORKOUT = {
+  workout_type: 'Boxing' as WorkoutType,
+  duration: '',
+  intensity: 5,
+  notes: '',
+  image_url: null,
+  is_rest_day: false,
+  id: '',
+  completed_at: new Date().toISOString()
+};
 
 export default function ViewWorkoutModal({ visible, onClose, onUpdate, workout }: ViewWorkoutModalProps) {
   const { session } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedWorkout, setEditedWorkout] = useState(workout);
+  const [editedWorkout, setEditedWorkout] = useState(workout || DEFAULT_WORKOUT);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
+  // Function to fetch fresh workout data
+  const fetchWorkoutData = async () => {
+    if (!session?.user || !workout?.id) return;
+
+    const { data, error } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('id', workout.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching workout:', error);
+      return;
+    }
+
+    if (data) {
+      setEditedWorkout(data);
+    }
+  };
+
+  // Set up real-time subscription
   useEffect(() => {
-    setEditedWorkout(workout);
-    setSelectedImageUri(null);
-  }, [workout]);
+    if (!session?.user || !workout?.id) return;
+
+    const workoutSubscription = supabase
+      .channel('workout-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workout_logs',
+          filter: `id=eq.${workout.id}`,
+        },
+        () => {
+          fetchWorkoutData();
+        }
+      )
+      .subscribe();
+
+    // Initial fetch
+    fetchWorkoutData();
+
+    return () => {
+      workoutSubscription.unsubscribe();
+    };
+  }, [workout?.id, session?.user]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedWorkout(workout || DEFAULT_WORKOUT);
+      setSelectedImageUri(null);
+    }
+  }, [workout, isEditing]);
 
   const isCurrentWeek = () => {
     if (!workout) return false;
@@ -85,7 +150,10 @@ export default function ViewWorkoutModal({ visible, onClose, onUpdate, workout }
 
   const handleImageSelect = (uri: string) => {
     setSelectedImageUri(uri);
-    setEditedWorkout(prev => prev ? { ...prev, image_url: uri } : undefined);
+    setEditedWorkout(prev => ({
+      ...prev,
+      image_url: uri
+    }));
   };
 
   const handleSave = async () => {
@@ -110,21 +178,25 @@ export default function ViewWorkoutModal({ visible, onClose, onUpdate, workout }
         finalImageUrl = url;
       }
 
+      const updatedWorkout = {
+        workout_type: editedWorkout.workout_type,
+        duration: editedWorkout.duration,
+        intensity: editedWorkout.intensity,
+        notes: editedWorkout.notes,
+        image_url: editedWorkout.is_rest_day ? null : finalImageUrl,
+        is_rest_day: editedWorkout.is_rest_day,
+      };
+
       const { error } = await supabase
         .from('workout_logs')
-        .update({
-          workout_type: editedWorkout.workout_type,
-          duration: editedWorkout.duration,
-          intensity: editedWorkout.intensity,
-          notes: editedWorkout.notes,
-          image_url: editedWorkout.is_rest_day ? null : finalImageUrl,
-          is_rest_day: editedWorkout.is_rest_day,
-        })
+        .update(updatedWorkout)
         .eq('id', editedWorkout.id);
 
       if (error) throw error;
 
       setIsEditing(false);
+      // Fetch fresh data after saving
+      await fetchWorkoutData();
       onUpdate();
     } catch (error) {
       Alert.alert('Error', 'Failed to update workout');
@@ -133,19 +205,29 @@ export default function ViewWorkoutModal({ visible, onClose, onUpdate, workout }
 
   const toggleRestDay = () => {
     Animated.spring(rotateAnim, {
-      toValue: editedWorkout?.is_rest_day ? 0 : 1,
+      toValue: editedWorkout.is_rest_day ? 0 : 1,
       useNativeDriver: true,
       friction: 8,
       tension: 40,
     }).start();
-    setEditedWorkout(prev => prev ? { ...prev, is_rest_day: !prev.is_rest_day } : undefined);
-    setIsEditing(true); // Automatically enter edit mode when toggling
+    setEditedWorkout(prev => ({
+      ...prev,
+      is_rest_day: !prev.is_rest_day
+    }));
+    setIsEditing(true);
   };
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
+
+  const handleClose = () => {
+    setIsEditing(false);
+    setEditedWorkout(workout || DEFAULT_WORKOUT);
+    setSelectedImageUri(null);
+    onClose();
+  };
 
   if (!workout) return null;
 
@@ -154,191 +236,212 @@ export default function ViewWorkoutModal({ visible, onClose, onUpdate, workout }
       visible={visible}
       animationType="slide"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <View style={styles.modalOverlay}>
-        <Card variant="elevated" style={styles.modalContent}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-              <Text style={styles.title}>
-                {new Date(workout.completed_at).toLocaleDateString()}
-              </Text>
-              <TouchableOpacity onPress={onClose}>
-                <Text style={styles.closeButton}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.content}>
-              <View style={styles.toggleContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleButton,
-                    editedWorkout?.is_rest_day && { backgroundColor: colors.calendar.streak.dot.rest },
-                    !isCurrentWeek() && styles.toggleButtonDisabled
-                  ]}
-                  onPress={toggleRestDay}
-                  disabled={!isCurrentWeek()}
-                >
-                  <Animated.View style={[styles.toggleContent, { transform: [{ rotate }] }]}>
-                    <Feather 
-                      name={editedWorkout?.is_rest_day ? "moon" : "activity"} 
-                      size={24} 
-                      color={editedWorkout?.is_rest_day ? colors.text.inverse : colors.text.primary} 
-                    />
-                  </Animated.View>
-                </TouchableOpacity>
-                <Text style={styles.toggleLabel}>
-                  {editedWorkout?.is_rest_day ? 'Rest Day' : 'Workout Day'}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+          <Card variant="elevated" style={styles.modalContent}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              <View style={styles.header}>
+                <Text style={styles.title}>
+                  {new Date(workout?.completed_at || '').toLocaleDateString()}
                 </Text>
+                <TouchableOpacity onPress={handleClose}>
+                  <Text style={styles.closeButton}>✕</Text>
+                </TouchableOpacity>
               </View>
 
-              {!editedWorkout?.is_rest_day && (
-                <>
-                  <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>Workout Details</Text>
-                    </View>
-                    <View style={styles.sectionContent}>
-                      <View style={styles.imageContainer}>
-                        {isEditing && isCurrentWeek() ? (
-                          <ImageSelector
-                            url={editedWorkout?.image_url || null}
-                            onSelect={handleImageSelect}
-                            viewMode="display"
-                            editable={true}
-                            style={styles.workoutImage}
-                          />
-                        ) : (
-                          <ImageViewer
-                            url={workout.image_url}
-                            size={200}
-                            style={styles.workoutImage}
-                          />
-                        )}
-                      </View>
+              <View style={styles.content}>
+                <View style={styles.toggleContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      editedWorkout.is_rest_day && { backgroundColor: colors.calendar.streak.dot.rest },
+                      !isCurrentWeek() && styles.toggleButtonDisabled
+                    ]}
+                    onPress={toggleRestDay}
+                    disabled={!isCurrentWeek()}
+                  >
+                    <Animated.View style={[styles.toggleContent, { transform: [{ rotate }] }]}>
+                      <Feather 
+                        name={editedWorkout.is_rest_day ? "moon" : "activity"} 
+                        size={24} 
+                        color={editedWorkout.is_rest_day ? colors.text.inverse : colors.text.primary} 
+                      />
+                    </Animated.View>
+                  </TouchableOpacity>
+                  <Text style={styles.toggleLabel}>
+                    {editedWorkout.is_rest_day ? 'Rest Day' : 'Workout Day'}
+                  </Text>
+                </View>
 
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.label}>Workout Type</Text>
-                        {isEditing ? (
-                          <Dropdown
-                            options={WORKOUT_TYPES}
-                            value={editedWorkout?.workout_type || ''}
-                            onSelect={(value) => 
-                              setEditedWorkout(prev => prev ? { ...prev, workout_type: value } : undefined)
-                            }
-                          />
-                        ) : (
-                          <Text style={styles.value}>{workout.workout_type}</Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>Additional Details</Text>
-                      <TouchableOpacity
-                        style={styles.optionalToggle}
-                        onPress={() => setShowOptionalFields(!showOptionalFields)}
-                      >
-                        <Text style={styles.optionalToggleText}>
-                          {showOptionalFields ? 'Hide Details' : 'Show Details'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {showOptionalFields && (
-                      <View style={styles.sectionContent}>
-                        <View style={styles.fieldContainer}>
-                          <Text style={styles.label}>Duration (minutes)</Text>
-                          {isEditing ? (
-                            <TextInput
-                              style={styles.input}
-                              value={editedWorkout?.duration}
-                              onChangeText={(text) => 
-                                setEditedWorkout(prev => prev ? { ...prev, duration: text } : undefined)
-                              }
-                              placeholder="Enter duration in minutes"
-                              keyboardType="numeric"
-                            />
-                          ) : (
-                            <Text style={styles.value}>{workout.duration}</Text>
-                          )}
-                        </View>
-
-                        <View style={styles.fieldContainer}>
-                          <Text style={styles.label}>Intensity (1-10)</Text>
-                          {isEditing ? (
-                            <View style={styles.intensityContainer}>
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
-                                <TouchableOpacity
-                                  key={level}
-                                  style={[
-                                    styles.intensityButton,
-                                    editedWorkout?.intensity === level && styles.intensityButtonActive,
-                                  ]}
-                                  onPress={() => setEditedWorkout(prev => prev ? { ...prev, intensity: level } : undefined)}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.intensityButtonText,
-                                      editedWorkout?.intensity === level && styles.intensityButtonTextActive,
-                                    ]}
-                                  >
-                                    {level}
-                                  </Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          ) : (
-                            <Text style={styles.value}>{workout.intensity}/10</Text>
-                          )}
-                        </View>
-
-                        <View style={styles.fieldContainer}>
-                          <Text style={styles.label}>Notes</Text>
-                          {isEditing ? (
-                            <TextInput
-                              style={[styles.input, styles.textArea]}
-                              value={editedWorkout?.notes}
-                              onChangeText={(text) => 
-                                setEditedWorkout(prev => prev ? { ...prev, notes: text } : undefined)
-                              }
-                              placeholder="Add any notes about your workout"
-                              multiline
-                              numberOfLines={4}
-                            />
-                          ) : (
-                            <Text style={styles.value}>{workout.notes || 'No notes'}</Text>
-                          )}
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                </>
-              )}
-
-              <View style={styles.footer}>
-                {isCurrentWeek() ? (
+                {!editedWorkout.is_rest_day && (
                   <>
-                    {!isEditing ? (
-                      <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-                        <Text style={styles.editButtonText}>Edit Day</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                        <Text style={styles.saveButtonText}>Save Changes</Text>
-                      </TouchableOpacity>
-                    )}
+                    <View style={styles.section}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Workout Details</Text>
+                      </View>
+                      <View style={styles.sectionContent}>
+                        <View style={styles.imageContainer}>
+                          {isEditing && isCurrentWeek() ? (
+                            <ImageSelector
+                              url={editedWorkout.image_url || null}
+                              onSelect={handleImageSelect}
+                              viewMode="display"
+                              editable={true}
+                              style={styles.workoutImage}
+                            />
+                          ) : (
+                            <ImageViewer
+                              url={workout.image_url}
+                              size={200}
+                              style={styles.workoutImage}
+                            />
+                          )}
+                        </View>
+
+                        <View style={styles.fieldContainer}>
+                          <Text style={styles.label}>Workout Type</Text>
+                          {isEditing ? (
+                            <Dropdown
+                              options={WORKOUT_TYPES}
+                              value={editedWorkout.workout_type || ''}
+                              onSelect={(value) => 
+                                setEditedWorkout(prev => ({
+                                  ...prev,
+                                  workout_type: value as WorkoutType
+                                }))
+                              }
+                            />
+                          ) : (
+                            <Text style={styles.value}>{workout.workout_type}</Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.section}>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Additional Details</Text>
+                        <TouchableOpacity
+                          style={styles.optionalToggle}
+                          onPress={() => setShowOptionalFields(!showOptionalFields)}
+                        >
+                          <Text style={styles.optionalToggleText}>
+                            {showOptionalFields ? 'Hide Details' : 'Show Details'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {showOptionalFields && (
+                        <View style={styles.sectionContent}>
+                          <View style={styles.fieldContainer}>
+                            <Text style={styles.label}>Duration (minutes)</Text>
+                            {isEditing ? (
+                              <TextInput
+                                style={styles.input}
+                                value={editedWorkout.duration}
+                                onChangeText={(text) => 
+                                  setEditedWorkout(prev => ({
+                                    ...prev,
+                                    duration: text
+                                  }))
+                                }
+                                placeholder="Enter duration in minutes"
+                                keyboardType="numeric"
+                              />
+                            ) : (
+                              <Text style={styles.value}>{workout.duration}</Text>
+                            )}
+                          </View>
+
+                          <View style={styles.fieldContainer}>
+                            <Text style={styles.label}>Intensity (1-10)</Text>
+                            {isEditing ? (
+                              <View style={styles.intensityContainer}>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                                  <TouchableOpacity
+                                    key={level}
+                                    style={[
+                                      styles.intensityButton,
+                                      editedWorkout.intensity === level && styles.intensityButtonActive,
+                                    ]}
+                                    onPress={() => setEditedWorkout(prev => ({
+                                      ...prev,
+                                      intensity: level
+                                    }))}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.intensityButtonText,
+                                        editedWorkout.intensity === level && styles.intensityButtonTextActive,
+                                      ]}
+                                    >
+                                      {level}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            ) : (
+                              <Text style={styles.value}>{workout.intensity}/10</Text>
+                            )}
+                          </View>
+
+                          <View style={styles.fieldContainer}>
+                            <Text style={styles.label}>Notes</Text>
+                            {isEditing ? (
+                              <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={editedWorkout.notes}
+                                onChangeText={(text) => {
+                                  setEditedWorkout(prev => ({
+                                    ...prev,
+                                    notes: text
+                                  }));
+                                }}
+                                placeholder="Add any notes about your workout"
+                                multiline
+                                numberOfLines={4}
+                              />
+                            ) : (
+                              <Text style={styles.value}>{workout.notes || 'No notes'}</Text>
+                            )}
+                          </View>
+                        </View>
+                      )}
+                    </View>
                   </>
-                ) : (
-                  <Text style={styles.readOnlyText}>View Only - Past Week</Text>
                 )}
+
+                <View style={styles.footer}>
+                  {isCurrentWeek() ? (
+                    <>
+                      {!isEditing ? (
+                        <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                          <Text style={styles.editButtonText}>Edit Day</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                          <Text style={styles.saveButtonText}>Save Changes</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.readOnlyText}>View Only - Past Week</Text>
+                  )}
+                </View>
               </View>
-            </View>
-          </ScrollView>
-        </Card>
-      </View>
+            </ScrollView>
+          </Card>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -550,5 +653,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.text.secondary,
     fontSize: 14,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
 }); 

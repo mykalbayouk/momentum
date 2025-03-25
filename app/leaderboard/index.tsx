@@ -18,128 +18,60 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import ImageViewer from '../../components/ImageViewer';
 import ProfileModal from '../../components/ProfileModal';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { realtimeDB } from '../../utils/RealtimeDB';
+import { StreakHelper } from '../../utils/StreakHelper';
+
+interface WorkoutLog {
+  completed_at: string;
+  is_rest_day: boolean;
+}
 
 interface User {
   id: string;
   username: string;
   avatar_url: string | null;
+  weekly_goal: number;
   current_streak: number;
   longest_streak: number;
-  weekly_goal: number;
-  workout_logs: {
-    completed_at: string;
-    is_rest_day: boolean;
-  }[];
+  workout_logs: WorkoutLog[];
+  is_week_complete: boolean;
+}
+
+interface WeekData {
+  startDate: Date;
+  isComplete: boolean;
 }
 
 export default function LeaderboardScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const streakHelper = StreakHelper.getInstance();
 
   useEffect(() => {
-    // Subscribe to profile changes
-    const subscription = supabase
-      .channel('leaderboard-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-        },
-        () => {
-          // Refresh leaderboard data when any profile changes
-          fetchLeaderboard();
-        }
-      )
-      .subscribe();
-
-    // Initial data fetch
-    fetchLeaderboard();
+    console.log('[Leaderboard] Setting up subscription');
+    realtimeDB.subscribeToLeaderboard((users: User[]) => {
+      console.log('[Leaderboard] Received users update');
+      const validUsers = users.filter(user => user && user.username);
+      const usersWithCalculatedStreaks = validUsers.map((user: User) => {
+        const displayStreak = streakHelper.calculateDisplayStreak(
+          user.current_streak,
+          user.is_week_complete
+        );
+        return {
+          ...user,
+          current_streak: displayStreak
+        };
+      });
+      setUsers(usersWithCalculatedStreaks);
+      setLoading(false);
+    });
 
     return () => {
-      subscription.unsubscribe();
+      console.log('[Leaderboard] Cleaning up subscription');
+      realtimeDB.unsubscribe('profiles', () => {});
     };
   }, []);
-
-  async function fetchLeaderboard() {
-    try {
-      setLoading(true);
-      console.log('Fetching leaderboard data...');
-      
-      // Fetch the full leaderboard data
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          username,
-          avatar_url,
-          current_streak,
-          longest_streak,
-          weekly_goal,
-          workout_logs (
-            completed_at,
-            is_rest_day
-          )
-        `)
-        .order('current_streak', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching leaderboard:', error);
-        throw error;
-      }
-
-      console.log('Raw leaderboard data:', JSON.stringify(data, null, 2));
-
-      if (data && data.length > 0) {
-        // Log each user's data for debugging
-        data.forEach((user, index) => {
-          console.log(`User ${index + 1}:`, {
-            id: user.id,
-            username: user.username,
-            current_streak: user.current_streak,
-            type: typeof user.current_streak
-          });
-        });
-
-        // Filter out users without required fields and ensure current_streak is a number
-        const validUsers = data.filter(user => {
-          const isValid = user.id && 
-            user.username && 
-            (typeof user.current_streak === 'number' || user.current_streak === null);
-          
-          if (!isValid) {
-            console.log('Invalid user data:', JSON.stringify(user, null, 2));
-          }
-          
-          return isValid;
-        });
-
-        // Convert any null current_streak to 0
-        const processedUsers = validUsers.map(user => ({
-          ...user,
-          current_streak: user.current_streak || 0
-        }));
-
-        console.log('Valid users count:', processedUsers.length);
-        console.log('Processed users:', JSON.stringify(processedUsers, null, 2));
-        
-        setUsers(processedUsers);
-      } else {
-        console.log('No data returned from query');
-        setUsers([]);
-      }
-    } catch (error) {
-      console.error('Error in fetchLeaderboard:', error);
-      if (error instanceof Error) {
-        Alert.alert('Error', error.message);
-      }
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const renderPodium = () => {
     if (users.length === 0) return null;
@@ -278,7 +210,6 @@ export default function LeaderboardScreen() {
           username: selectedUser?.username || '',
           profilePicture: selectedUser?.avatar_url || undefined,
           currentStreak: selectedUser?.current_streak || 0,
-          longestStreak: selectedUser?.longest_streak || 0,
           weekly_goal: selectedUser?.weekly_goal || 0,
           workouts: selectedUser?.workout_logs || [],
         }}

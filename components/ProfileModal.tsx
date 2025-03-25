@@ -16,7 +16,6 @@ interface ProfileModalProps {
     username: string;
     profilePicture?: string;
     currentStreak: number;
-    longestStreak: number;
     weekly_goal: number;
     workouts: WorkoutLog[];
   };
@@ -168,10 +167,6 @@ export default function ProfileModal({ visible, onClose, user }: ProfileModalPro
                 <View style={styles.streakItem}>
                   <Text style={styles.streakLabel}>Current Streak</Text>
                   <Text style={styles.streakValue}>{user.currentStreak} weeks</Text>
-                </View>
-                <View style={styles.streakItem}>
-                  <Text style={styles.streakLabel}>Longest Streak</Text>
-                  <Text style={styles.streakValue}>{user.longestStreak} weeks</Text>
                 </View>
               </View>
 

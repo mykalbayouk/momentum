@@ -6,6 +6,8 @@ import {
   TextInput,
   ScrollView,
   SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Button from '../../components/Button';
@@ -25,6 +27,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
 
   const handleImageSelect = (uri: string) => {
     setSelectedImageUri(uri);
@@ -86,6 +89,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
           username: username.trim(),
           current_streak: 0,
           longest_streak: 0,
+          group_id: joinedGroupId,
         })
         .eq('id', session.user.id);
 
@@ -103,74 +107,88 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome to Morementum!</Text>
-          <Text style={styles.subtitle}>Let's get you set up</Text>
-        </View>
-
-        <Card variant="elevated" style={styles.card}>
-          <Text style={styles.label}>Profile Picture</Text>
-          <View style={styles.imageContainer}>
-            <ImageSelector 
-              url={imageUrl}
-              size={120}
-              onSelect={handleImageSelect}
-              viewMode="avatar"
-              placeholder=""
-              style={styles.avatar}
-            />
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome to Momentum!</Text>
+            <Text style={styles.subtitle}>Let's get you set up</Text>
           </View>
 
-          <Text style={styles.label}>Username</Text>
-          <TextInput
-            style={styles.input}
-            value={username}
-            onChangeText={setUsername}
-            placeholder="Choose a username"
-            placeholderTextColor={colors.text.secondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            maxLength={12}
-          />
-          <Text style={[styles.description, username.length >= 12 && styles.warningText]}>
-            {username.length}/12 characters
-          </Text>
-          <Text style={styles.description}>
-            This username will be visible to other users. Choose something unique and memorable.
-          </Text>
+          <Card variant="elevated" style={styles.card}>
+            <Text style={styles.label}>Profile Picture</Text>
+            <View style={styles.imageContainer}>
+              <ImageSelector 
+                url={imageUrl}
+                size={120}
+                onSelect={handleImageSelect}
+                viewMode="avatar"
+                placeholder=""
+                style={styles.avatar}
+              />
+            </View>
 
-          <Text style={styles.label}>Weekly Goal</Text>
-          <TextInput
-            style={styles.input}
-            value={activeDays}
-            onChangeText={setActiveDays}
-            placeholder="How many days per week do you want to work out?(between 1 and 7)"
-            placeholderTextColor={colors.text.secondary}
-            keyboardType="numeric"
-          />
-          <Text style={styles.description}>
-            Your weekly goal determines how many days you need to work out each week to maintain your streak. For example, if you set your goal to 5 days:
-            {'\n\n'}• You need to complete 5 workouts (excluding rest days) each week
-            {'\n'}• Meeting this goal increases your streak by 1 week
-            {'\n'}• Missing the goal breaks your streak
-            {'\n\n'}Choose a goal that's challenging but achievable for your schedule.
-          </Text>
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={styles.input}
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Choose a username"
+              placeholderTextColor={colors.text.secondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={12}
+            />
+            <Text style={[styles.description, username.length >= 12 && styles.warningText]}>
+              {username.length}/12 characters
+            </Text>
+            <Text style={styles.description}>
+              This username will be visible to other users. Choose something unique and memorable.
+            </Text>
 
-          <Text style={styles.label}>Join a Group (Optional)</Text>
-          <GroupCodeInput
-            userId={session?.user?.id || ''}
-            onJoinSuccess={() => {}}
-          />
+            <Text style={styles.label}>Weekly Goal</Text>
+            <TextInput
+              style={styles.input}
+              value={activeDays}
+              onChangeText={setActiveDays}
+              placeholder="How many days per week do you want to work out?(between 1 and 7)"
+              placeholderTextColor={colors.text.secondary}
+              keyboardType="numeric"
+            />
+            <Text style={styles.description}>
+              Your weekly goal determines how many days you need to work out each week to maintain your streak. For example, if you set your goal to 5 days:
+              {'\n\n'}• You need to complete 5 workouts (excluding rest days) each week
+              {'\n'}• Meeting this goal increases your streak by 1 week
+              {'\n'}• Missing the goal breaks your streak
+              {'\n\n'}Choose a goal that's challenging but achievable for your schedule.
+            </Text>
 
-          <Button
-            title={isLoading ? "Completing..." : "Complete Setup"}
-            onPress={handleSubmit}
-            style={styles.submitButton}
-            disabled={isLoading}
-          />
-        </Card>
-      </ScrollView>
+            <Text style={styles.label}>Join a Group (Optional)</Text>
+            <GroupCodeInput
+              userId={session?.user?.id || ''}
+              onJoinSuccess={(groupId) => {
+                setJoinedGroupId(groupId);
+                // Show success message
+                setError('Successfully joined group!');
+                // Clear error after 2 seconds
+                setTimeout(() => setError(null), 2000);
+              }}
+            />
+
+            <Button
+              title={isLoading ? "Completing..." : "Complete Setup"}
+              onPress={handleSubmit}
+              style={styles.submitButton}
+              disabled={isLoading}
+            />
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
       {error && <Toast message={error} onHide={() => setError(null)} />}
     </SafeAreaView>
   );

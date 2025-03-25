@@ -9,12 +9,12 @@ import {
   SafeAreaView,
   Modal,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Feather from 'react-native-vector-icons/Feather';
-import CreateGroupScreen from '../create-group/index';
 import { supabase } from '../../utils/supabase';
 import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import GroupCodeInput from '../../components/GroupCodeInput';
@@ -131,7 +131,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
                   />
                   <View style={styles.memberInfo}>
                     <Text style={styles.memberName}>{member.username}</Text>
-                    <Text style={styles.streakText}>{member.current_streak} week streak</Text>
+                    <Text style={styles.streakText}>{member.current_streak} {member.current_streak === 1 ? 'Week' : 'Weeks'} Streak</Text>
                   </View>
                 </View>
               </Card>
@@ -147,7 +147,6 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
           username: selectedMember?.username || '',
           profilePicture: selectedMember?.avatar_url || undefined,
           currentStreak: selectedMember?.current_streak || 0,
-          longestStreak: selectedMember?.longest_streak || 0,
           weekly_goal: selectedMember?.weekly_goal || 0,
           workouts: selectedMember?.workout_logs || [],
         }}
@@ -431,17 +430,59 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
   };
 
   const handleLeaveGroup = async () => {
-    if (!userId) return;
+    if (!userId || !currentGroup) return;
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ group_id: null })
-        .eq('id', userId);
+    // Check if user is the last member
+    if (currentGroup.members.length === 1) {
+      Alert.alert(
+        'Warning',
+        'You are the last member of this group. If you leave, the group will be deleted. Are you sure you want to continue?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Leave Group',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // First update the user's profile to remove group association
+                const { error: updateError } = await supabase
+                  .from('profiles')
+                  .update({ group_id: null })
+                  .eq('id', userId);
 
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error leaving group:', error);
+                if (updateError) throw updateError;
+
+                // Then delete the group
+                const { error: deleteError } = await supabase
+                  .from('groups')
+                  .delete()
+                  .eq('id', currentGroup.id);
+
+                if (deleteError) throw deleteError;
+              } catch (error) {
+                console.error('Error leaving group:', error);
+                Alert.alert('Error', 'Failed to leave group. Please try again.');
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      // Normal leave flow for non-last members
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ group_id: null })
+          .eq('id', userId);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error leaving group:', error);
+        Alert.alert('Error', 'Failed to leave group. Please try again.');
+      }
     }
   };
 
@@ -833,7 +874,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   leaveButtonText: {
-    color: colors.text.inverse,
+    color: colors.text.primary,
     fontSize: 14,
     fontWeight: '600',
   },

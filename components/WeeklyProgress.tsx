@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import Card from './Card';
@@ -11,41 +11,18 @@ interface WeeklyProgressProps {
   weeklyGoal: number;
 }
 
+interface Profile {
+  id: string;
+  weekly_goal: number;
+  [key: string]: any;
+}
+
 export default function WeeklyProgress({ weeklyGoal }: WeeklyProgressProps) {
   const { session } = useAuth();
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!session?.user) return;
-
-    // Subscribe to workout log changes
-    const subscription = supabase
-      .channel('weekly-progress-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'workout_logs',
-          filter: `user_id=eq.${session.user.id}`,
-        },
-        () => {
-          // Refresh progress when changes occur
-          loadWeeklyProgress();
-        }
-      )
-      .subscribe();
-
-    // Initial data fetch
-    loadWeeklyProgress();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [session]);
-
-  async function loadWeeklyProgress() {
+  const loadWeeklyProgress = useCallback(async () => {
     try {
       if (!session?.user) return;
 
@@ -78,7 +55,76 @@ export default function WeeklyProgress({ weeklyGoal }: WeeklyProgressProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [session?.user, weeklyGoal]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    // Subscribe to workout log changes
+    const workoutSubscription = supabase
+      .channel('weekly-progress-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workout_logs',
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        () => {
+          // Clear any pending timeout
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          // Set a new timeout to debounce the update
+          timeoutId = setTimeout(loadWeeklyProgress, 500);
+        }
+      )
+      .subscribe();
+
+    // Subscribe to profile changes
+    const profileSubscription = supabase
+      .channel('weekly-progress-profile-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          const newProfile = payload.new as Profile;
+          const oldProfile = payload.old as Profile;
+          
+          // Only update if the weekly goal has changed
+          if (newProfile?.weekly_goal !== oldProfile?.weekly_goal) {
+            // Clear any pending timeout
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+            // Set a new timeout to debounce the update
+            timeoutId = setTimeout(loadWeeklyProgress, 500);
+          }
+        }
+      )
+      .subscribe();
+
+    // Initial data fetch
+    loadWeeklyProgress();
+
+    return () => {
+      // Clear any pending timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // Unsubscribe from both channels
+      workoutSubscription.unsubscribe();
+      profileSubscription.unsubscribe();
+    };
+  }, [session?.user, loadWeeklyProgress]);
 
   return (
     <Card

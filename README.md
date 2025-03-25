@@ -1,6 +1,6 @@
-# Morementum - Fitness Streak Tracker
+# Momentum - Fitness Streak Tracker
 
-Morementum is a fitness tracking app designed to help users build and maintain consistent workout habits through streak tracking and social motivation.
+Momentum is a fitness tracking app designed to help users build and maintain consistent workout habits through streak tracking and social motivation.
 
 ## Features
 
@@ -68,9 +68,9 @@ MVP Completed:
         - ✅ Creation of group, logging workout, etc. (Belive Realtime database will fix this)
     - ✅ Calender Streak Styling is not correct
     - Need to adjust how trying to log multiple workouts on the same day
-    - Streak Calculation needs to be fixed
+    - ✅ Streak Calculation needs to be fixed
         - Adjust realtime calculation to match streak calculation, incase changed to rest day or deleted workout
-    - Create Profile Modal
+    - ✅ Create Profile Modal
     - Create Notifcations so People can see when you have logged a workout
 - Styling Improvements
 - More Features

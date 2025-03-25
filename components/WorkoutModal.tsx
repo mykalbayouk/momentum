@@ -9,6 +9,8 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { colors } from '../theme/colors';
 import Button from './Button';
@@ -19,10 +21,10 @@ import ImageSelector from './ImageSelector';
 import Feather from 'react-native-vector-icons/Feather';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { getLocalDateISO, getStartOfToday, getEndOfToday, getYesterday, getStartOfWeek, getEndOfWeek } from '../utils/dateUtils';
+import { getStartOfWeek, getEndOfWeek } from '../utils/dateUtils';
 import { uploadImage, deleteImage } from '../utils/imageUpload';
 
-type WorkoutType = 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
+type WorkoutType = 'Walking' | 'Strength Training' | 'Running' | 'Swimming' | 'Climbing' | 'Cycling' | 'Yoga' | 'Hiking' | 'Boxing' | 'Sports' | 'Other';
 
 interface WorkoutModalProps {
   visible: boolean;
@@ -42,7 +44,7 @@ interface WorkoutModalProps {
 
 export default function WorkoutModal({ visible, onClose, onUpdate, workout }: WorkoutModalProps) {
   const { session } = useAuth();
-  const [workoutType, setWorkoutType] = useState<WorkoutType>(workout?.workout_type || 'Running');
+  const [workoutType, setWorkoutType] = useState<WorkoutType>(workout?.workout_type || 'Strength Training');
   const [duration, setDuration] = useState(workout?.duration.replace(' minutes', '') || '');
   const [intensity, setIntensity] = useState(workout?.intensity || 5);
   const [notes, setNotes] = useState(workout?.notes || '');
@@ -57,6 +59,7 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
   const workoutTypes: WorkoutType[] = [
     'Strength Training',
     'Running',
+    'Walking',
     'Swimming', 
     'Climbing',
     'Cycling',
@@ -242,10 +245,16 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
         <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
           <Card variant="elevated" style={styles.modalContent}>
-            <ScrollView>
+            <ScrollView 
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
               <View style={styles.header}>
                 <Text style={styles.title}>{workout ? 'Edit Workout' : 'Log Workout'}</Text>
                 <TouchableOpacity onPress={onClose}>
@@ -367,7 +376,7 @@ export default function WorkoutModal({ visible, onClose, onUpdate, workout }: Wo
             </ScrollView>
           </Card>
         </TouchableWithoutFeedback>
-      </View>
+      </KeyboardAvoidingView>
       {error && <Toast message={error} onHide={() => setError(null)} />}
     </Modal>
   );
@@ -384,6 +393,9 @@ const styles = StyleSheet.create({
     width: '90%',
     maxHeight: '90%',
     padding: 16,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',

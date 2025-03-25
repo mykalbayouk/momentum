@@ -184,14 +184,14 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
+            <Text style={styles.title}>Welcome to Momentum</Text>
+            <Text style={styles.subtitle}>Your personal fitness companion</Text>
             <Image 
               source={require('../../assets/images/icon.png')} 
               style={styles.appIcon}
             />
-            <Text style={styles.title}>Welcome to Morementum</Text>
-            <Text style={styles.subtitle}>Your personal fitness companion</Text>
             <Text style={styles.description}>
-              Track your workouts, build habits, and achieve your fitness goals with Morementum. 
+              Track your workouts, build habits, and achieve your fitness goals with Momentum. 
               Sign in to start your fitness journey today.
             </Text>
           </View>

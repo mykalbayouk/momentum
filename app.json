@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "morementum",
-    "slug": "morementum",
-    "version": "1.0.0",
+    "name": "momentum",
+    "slug": "momentum",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -14,9 +14,9 @@
       "bundleIdentifier": "com.michaelbayouk.momentum",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Morementum needs access to your photo library to let you select workout photos.",
-        "NSPhotoLibraryAddUsageDescription": "Morementum needs access to your photo library to save workout photos.",
-        "NSCameraUsageDescription": "Morementum needs access to your camera to take workout photos."
+        "NSPhotoLibraryUsageDescription": "Momentum needs access to your photo library to let you select workout photos.",
+        "NSPhotoLibraryAddUsageDescription": "Momentum needs access to your photo library to save workout photos.",
+        "NSCameraUsageDescription": "Momentum needs access to your camera to take workout photos."
       }
     },
     "android": {

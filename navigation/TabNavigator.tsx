@@ -112,6 +112,13 @@ export default function TabNavigator() {
         <Tab.Screen
           name="Workout"
           component={View}
+          listeners={{
+            tabPress: (e) => {
+              // Prevent default navigation behavior
+              e.preventDefault();
+              handleWorkoutPress();
+            },
+          }}
           options={{
             tabBarIcon: ({ color, size }) => (
               <TouchableOpacity 
@@ -171,7 +178,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   plusButton: {
-    top: -20,
+    top: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
