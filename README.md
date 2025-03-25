@@ -2,6 +2,10 @@
 
 Momentum is a fitness tracking app designed to help users build and maintain consistent workout habits through streak tracking and social motivation.
 
+## Current Stage of Development
+- ✅ MVP Completed
+- User Testing internally with 50+ users using TestFlight
+
 ## Features
 
 ### Streak Tracking

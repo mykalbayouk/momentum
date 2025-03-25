@@ -5,9 +5,10 @@
 
 ## Bug Fixes
 - ✅ Default Strength Training to first exercise
-- When Typing notes, keyboard blocks textbox from being seen
-- Do not allow user to leave edit profile screen, if they have not saved changes
-- Weely Goal going above 7 Days, form edit profile screen
+- ✅ When Typing notes, keyboard blocks textbox from being seen
+- ✅ Do not allow user to leave edit profile screen, if they have not saved changes
+- ✅ Weely Goal going above 7 Days, form edit profile screen
+- Ensure when new user joins app, updates for everyone
 
 
 ## Things I need to add
