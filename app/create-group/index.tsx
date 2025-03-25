@@ -8,6 +8,7 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Switch,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import Button from '../../components/Button';
@@ -26,6 +27,7 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const handleImageSelect = (uri: string) => {
     setSelectedImageUri(uri);
@@ -38,8 +40,8 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
       return;
     }
 
-    if (name.trim().length > 10) {
-      Alert.alert('Error', 'Group name must be 10 characters or less');
+    if (name.trim().length > 18) {
+      Alert.alert('Error', 'Group name must be 18 characters or less');
       return;
     }
 
@@ -63,7 +65,8 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
             name: name.trim(),
             description: description.trim(),
             image_url: finalImageUrl,
-            created_by: user.id
+            created_by: user.id,
+            is_private: isPrivate
           }
         ])
         .select()
@@ -112,10 +115,10 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
               onChangeText={setName}
               placeholder="Enter group name"
               placeholderTextColor={colors.text.secondary}
-              maxLength={10}
+              maxLength={18}
             />
             <Text style={styles.helperText}>
-              Title can only be 10 characters ({10 - name.length} remaining)
+              Title can only be 18 characters ({18 - name.length} remaining)
             </Text>
 
             <Text style={styles.label}>Description</Text>
@@ -128,6 +131,18 @@ export default function CreateGroupScreen({ onClose }: CreateGroupScreenProps) {
               multiline
               numberOfLines={4}
             />
+
+            <View style={styles.toggleContainer}>
+              <Text style={styles.label}>Private Group</Text>
+              <Switch
+                value={isPrivate}
+                onValueChange={setIsPrivate}
+                trackColor={{ false: colors.neutral.grey300, true: colors.primary.main }}
+              />
+            </View>
+            <Text style={styles.helperText}>
+              Private groups can only be joined with a group code
+            </Text>
           </View>
 
           <Button
@@ -192,5 +207,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.secondary,
     marginTop: 4,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
   },
 }); 

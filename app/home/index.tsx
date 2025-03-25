@@ -357,6 +357,7 @@ export default function HomeScreen() {
           )}
 
           <View style={styles.calendarContainer}>
+            <Text style={styles.calendarLabel}>Click the dates to view individual workout logs</Text>
             <Calendar
               markedDates={markedDates}
               onDayPress={handleDayPress}
@@ -417,6 +418,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.text.primary,
+  },
+  calendarLabel: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   calendarContainer: {
     marginBottom: 24,

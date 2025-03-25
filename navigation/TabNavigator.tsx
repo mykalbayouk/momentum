@@ -32,7 +32,7 @@ function GroupsScreenWrapper() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create Group</Text>
             <TouchableOpacity onPress={() => setShowCreateGroupModal(false)}>
-              <Text style={styles.closeButton}>✕</Text>
+              <Text style={[styles.closeButton, { color: colors.text.primary }]}>X</Text>
             </TouchableOpacity>
           </View>
           <CreateGroupScreen onClose={() => setShowCreateGroupModal(false)} />
@@ -207,5 +207,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 8,
+    fontSize: 16,
   },
 }); 

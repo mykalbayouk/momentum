@@ -36,6 +36,7 @@ interface Group {
   image_url: string | null;
   created_at: string;
   code: string;
+  is_private: boolean;
 }
 
 interface GroupMember {
@@ -130,7 +131,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = ({
                   />
                   <View style={styles.memberInfo}>
                     <Text style={styles.memberName}>{member.username}</Text>
-                    <Text style={styles.streakText}>{member.current_streak} day streak</Text>
+                    <Text style={styles.streakText}>{member.current_streak} week streak</Text>
                   </View>
                 </View>
               </Card>
@@ -159,7 +160,6 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
   const [searchQuery, setSearchQuery] = useState('');
   const [groups, setGroups] = useState<Group[]>([]);
   const [currentGroup, setCurrentGroup] = useState<CurrentGroup | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<CurrentGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -209,6 +209,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                 image_url,
                 created_at,
                 code,
+                is_private,
                 members:profiles!profiles_group_id_fkey(
                   id,
                   username,
@@ -262,6 +263,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                 image_url,
                 created_at,
                 code,
+                is_private,
                 members:profiles!profiles_group_id_fkey(
                   id,
                   username,
@@ -307,8 +309,10 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
         image_url,
         created_at,
         code,
+        is_private,
         profiles!profiles_group_id_fkey(count)
       `)
+      .eq('is_private', false)
       .order('created_at', { ascending: false });
 
     if (!groupsError) {
@@ -340,6 +344,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
             image_url,
             created_at,
             code,
+            is_private,
             members:profiles!profiles_group_id_fkey(
               id,
               username,
@@ -385,6 +390,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
           image_url,
           created_at,
           code,
+          is_private,
           members:profiles!profiles_group_id_fkey(
             id,
             username,
@@ -535,25 +541,6 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
           groups.map(group => renderGroupItem({ item: group }))
         )}
       </ScrollView>
-
-      <Modal
-        visible={showCreateModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Group</Text>
-            <TouchableOpacity 
-              onPress={() => setShowCreateModal(false)}
-              style={styles.closeButton}
-            >
-              <Feather name="x" size={24} color={colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-          <CreateGroupScreen onClose={() => setShowCreateModal(false)} />
-        </SafeAreaView>
-      </Modal>
 
       <Modal
         visible={!!selectedGroup}

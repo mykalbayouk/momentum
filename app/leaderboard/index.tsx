@@ -152,7 +152,10 @@ export default function LeaderboardScreen() {
       <View style={styles.podiumContainer}>
         {/* Second Place */}
         {second && (
-          <View style={styles.podiumItem}>
+          <TouchableOpacity
+            style={styles.podiumItem}
+            onPress={() => setSelectedUser(second)}
+          >
             <ImageViewer
               url={second.avatar_url}
               size={60}
@@ -163,12 +166,15 @@ export default function LeaderboardScreen() {
             </View>
             <Text style={styles.podiumName} numberOfLines={1}>{second.username}</Text>
             <Text style={styles.podiumScore}>{second.current_streak}</Text>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* First Place */}
         {first && (
-          <View style={[styles.podiumItem, styles.firstPlace]}>
+          <TouchableOpacity
+            style={[styles.podiumItem, styles.firstPlace]}
+            onPress={() => setSelectedUser(first)}
+          >
             <View style={styles.crownContainer}>
               <FontAwesome5 name="crown" size={24} color={colors.primary.main} />
             </View>
@@ -182,12 +188,15 @@ export default function LeaderboardScreen() {
             </View>
             <Text style={styles.podiumName} numberOfLines={1}>{first.username}</Text>
             <Text style={styles.podiumScore}>{first.current_streak}</Text>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Third Place */}
         {third && (
-          <View style={styles.podiumItem}>
+          <TouchableOpacity
+            style={styles.podiumItem}
+            onPress={() => setSelectedUser(third)}
+          >
             <ImageViewer
               url={third.avatar_url}
               size={60}
@@ -198,7 +207,7 @@ export default function LeaderboardScreen() {
             </View>
             <Text style={styles.podiumName} numberOfLines={1}>{third.username}</Text>
             <Text style={styles.podiumScore}>{third.current_streak}</Text>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
     );

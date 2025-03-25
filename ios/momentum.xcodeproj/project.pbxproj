@@ -10,12 +10,12 @@
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		3AC7ADF68A9481EF7206A010 /* libPods-momentum.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E587D967C33A0C740A2B12F /* libPods-momentum.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		4C966326B106425997C99920 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026D61E290F142158D07C940 /* noop-file.swift */; };
 		644D3E866E265BEC63EDFF28 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CCEF551EC96B1EBEDFDD475F /* PrivacyInfo.xcprivacy */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		C287F5B71E2B8DF6C8CE2FCB /* libPods-momentum.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7F4288FEF321AC289D4FAABE /* libPods-momentum.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,15 +26,15 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = momentum/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = momentum/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = momentum/main.m; sourceTree = "<group>"; };
+		232552230F70D019D533594C /* Pods-momentum.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.debug.xcconfig"; path = "Target Support Files/Pods-momentum/Pods-momentum.debug.xcconfig"; sourceTree = "<group>"; };
 		2ACB06765E8A4E28AC231392 /* momentum-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "momentum-Bridging-Header.h"; path = "momentum/momentum-Bridging-Header.h"; sourceTree = "<group>"; };
-		7F4288FEF321AC289D4FAABE /* libPods-momentum.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-momentum.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7E587D967C33A0C740A2B12F /* libPods-momentum.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-momentum.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = momentum/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B05047C82641F8D2610883F5 /* Pods-momentum.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.debug.xcconfig"; path = "Pods/Target Support Files/Pods-momentum/Pods-momentum.debug.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		C32B11E367308915B2BD66B0 /* Pods-momentum.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.release.xcconfig"; path = "Target Support Files/Pods-momentum/Pods-momentum.release.xcconfig"; sourceTree = "<group>"; };
 		CCEF551EC96B1EBEDFDD475F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = momentum/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-momentum/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		FDB191A99FADB041A70FC940 /* Pods-momentum.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-momentum.release.xcconfig"; path = "Pods/Target Support Files/Pods-momentum/Pods-momentum.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,7 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C287F5B71E2B8DF6C8CE2FCB /* libPods-momentum.a in Frameworks */,
+				3AC7ADF68A9481EF7206A010 /* libPods-momentum.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -66,11 +66,20 @@
 			name = momentum;
 			sourceTree = "<group>";
 		};
+		190DD2277DF1B5AE03228BA1 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				232552230F70D019D533594C /* Pods-momentum.debug.xcconfig */,
+				C32B11E367308915B2BD66B0 /* Pods-momentum.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				7F4288FEF321AC289D4FAABE /* libPods-momentum.a */,
+				7E587D967C33A0C740A2B12F /* libPods-momentum.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -89,8 +98,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				D65327D7A22EEC0BE12398D9 /* Pods */,
 				D7E4C46ADA2E9064B798F356 /* ExpoModulesProviders */,
+				190DD2277DF1B5AE03228BA1 /* Pods */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -122,15 +131,6 @@
 			path = momentum/Supporting;
 			sourceTree = "<group>";
 		};
-		D65327D7A22EEC0BE12398D9 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				B05047C82641F8D2610883F5 /* Pods-momentum.debug.xcconfig */,
-				FDB191A99FADB041A70FC940 /* Pods-momentum.release.xcconfig */,
-			);
-			name = Pods;
-			sourceTree = "<group>";
-		};
 		D7E4C46ADA2E9064B798F356 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
@@ -146,15 +146,14 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "momentum" */;
 			buildPhases = (
-				D5173FD22D91FB2800682365 /* ShellScript */,
-				990883F06D3DE73785F352FA /* [CP] Check Pods Manifest.lock */,
+				8C231FC831D225036E66C3EF /* [CP] Check Pods Manifest.lock */,
 				39942D8A5A3D10602B6AFC25 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				B27F96A5902C1599CEE14C3F /* [CP] Embed Pods Frameworks */,
-				62E0758868A1397C107325D1 /* [CP] Copy Pods Resources */,
+				7B49D6549633A93B09F0392E /* [CP] Embed Pods Frameworks */,
+				D23590DA7DB01F08F318679B /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -245,7 +244,47 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-momentum/expo-configure-project.sh\"\n";
 		};
-		62E0758868A1397C107325D1 /* [CP] Copy Pods Resources */ = {
+		7B49D6549633A93B09F0392E /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-momentum/Pods-momentum-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-momentum/Pods-momentum-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		8C231FC831D225036E66C3EF /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-momentum-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D23590DA7DB01F08F318679B /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -333,63 +372,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-momentum/Pods-momentum-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		990883F06D3DE73785F352FA /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-momentum-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		B27F96A5902C1599CEE14C3F /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-momentum/Pods-momentum-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-momentum/Pods-momentum-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D5173FD22D91FB2800682365 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "#!/bin/sh\n\n# Install Node.js using Homebrew\nbrew install node\n\n# Install CocoaPods using Homebrew\nbrew install cocoapods\n\n# Navigate to the project root directory\ncd ..\n\n# Install Node.js dependencies\nnpm install\n\n# Navigate back to the ios directory\ncd ios\n\n# Install dependencies you manage with CocoaPods\npod install\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -409,7 +391,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B05047C82641F8D2610883F5 /* Pods-momentum.debug.xcconfig */;
+			baseConfigurationReference = 232552230F70D019D533594C /* Pods-momentum.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -433,7 +415,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelbayouk.momentum;
 				PRODUCT_NAME = momentum;
 				SWIFT_OBJC_BRIDGING_HEADER = "momentum/momentum-Bridging-Header.h";
@@ -446,7 +428,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = FDB191A99FADB041A70FC940 /* Pods-momentum.release.xcconfig */;
+			baseConfigurationReference = C32B11E367308915B2BD66B0 /* Pods-momentum.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
