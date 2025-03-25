@@ -1,0 +1,1 @@
+- When Clicking group code, it copies to clipboard
