@@ -20,6 +20,7 @@ import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supab
 import GroupCodeInput from '../../components/GroupCodeInput';
 import ImageViewer from '../../components/ImageViewer';
 import ProfileModal from '../../components/ProfileModal';
+import { StreakHelper } from '../../utils/StreakHelper';
 
 interface Profile {
   id: string;
@@ -163,6 +164,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const streakHelper = StreakHelper.getInstance();
 
   useEffect(() => {
     // Get initial user and set up auth subscription
@@ -180,6 +182,21 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
       subscription.unsubscribe();
     };
   }, []);
+
+  const processGroupData = (groupData: any) => {
+    if (!groupData) return null;
+    
+    return {
+      ...groupData,
+      members: groupData.members.map((member: any) => ({
+        ...member,
+        current_streak: streakHelper.calculateDisplayStreak(
+          member.current_streak,
+          member.is_week_complete
+        )
+      }))
+    };
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -216,6 +233,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                   current_streak,
                   longest_streak,
                   weekly_goal,
+                  is_week_complete,
                   workout_logs (
                     completed_at,
                     is_rest_day
@@ -226,7 +244,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
               .single();
 
             if (!groupError && groupData) {
-              setCurrentGroup(groupData);
+              setCurrentGroup(processGroupData(groupData));
               setGroups([]);
             }
           } else {
@@ -270,6 +288,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
                   current_streak,
                   longest_streak,
                   weekly_goal,
+                  is_week_complete,
                   workout_logs (
                     completed_at,
                     is_rest_day
@@ -280,7 +299,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
               .single();
 
             if (!groupError && groupData) {
-              setCurrentGroup(groupData);
+              setCurrentGroup(processGroupData(groupData));
             }
           }
         )
@@ -351,6 +370,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
               current_streak,
               longest_streak,
               weekly_goal,
+              is_week_complete,
               workout_logs (
                 completed_at,
                 is_rest_day
@@ -361,7 +381,7 @@ export default function GroupsScreen({ onCreateGroupPress }: { onCreateGroupPres
           .single();
 
         if (groupError) throw groupError;
-        setCurrentGroup(groupData);
+        setCurrentGroup(processGroupData(groupData));
       } else {
         await fetchAvailableGroups();
       }
