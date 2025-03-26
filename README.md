@@ -4,7 +4,11 @@ Momentum is a fitness tracking app designed to help users build and maintain con
 
 ## Current Stage of Development
 - ✅ MVP Completed
-- User Testing internally with 50+ users using TestFlight
+- ✅ User Testing internally with 50+ users using TestFlight
+- Public Beta Testing in Progress with link below
+
+### Join Beta Testing
+[Beta Link](https://testflight.apple.com/join/MhvrrVra)
 
 ## Features
 
