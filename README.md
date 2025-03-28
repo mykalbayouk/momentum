@@ -78,8 +78,13 @@ MVP Completed:
     - Need to adjust how trying to log multiple workouts on the same day
     - ✅ Streak Calculation needs to be fixed
         - Adjust realtime calculation to match streak calculation, incase changed to rest day or deleted workout
+- New Features
     - ✅ Create Profile Modal
     - Create Notifcations so People can see when you have logged a workout
+	- Add Swipe Down Refresh app feature
+	- Add Friends, Friends can view workouts on calender
+	- Add Details per workout (detail pane changes depending on vhosen workout)
+	- Add workouts in the past
 - Styling Improvements
 - More Features
     - Add Point System
